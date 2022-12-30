@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es6",
+    "allowJs": false,
+    "checkJs": true,
+    "jsx": "react",
+    "outDir": "./build",
+    "rootDir": "./src",
+    "removeComments": true,
+    "noEmit": true,
+    "pretty": false,
+    "skipLibCheck": true,
+    "strict": true
+  }
+}
