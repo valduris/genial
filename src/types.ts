@@ -1,4 +1,5 @@
 import { SET_GENIAL_UI_STATE } from "./consts";
+import { Api } from "./api";
 
 export type PermanentAny = any;
 
@@ -17,17 +18,21 @@ export type Color = "red" | "yellow" | "orange" | "blue" | "green" | "violet";
 
 export type BoardSize = 6 | 7 | 8;
 
-type ProgressValue = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18;
+export type ProgressValue = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18;
 
 export type PlayerHexyPairIndex = 0 | 1 | 2 | 3 | 4 | 5;
+
+export type Progress = Record<Color, ProgressValue>;
+
+export type Direction = [-1, 0] | [0, -1] | [1, 0] | [-1, 1] | [0, 1] | [1, -1];
 
 export interface Player {
     name: string;
     hoveredHexyCoords: Point | undefined;
     hexyPairs: PlayerHexyPairs;
     firstPlacedHexy: BoardHexy | undefined;
-    turn: boolean;
-    progress: Record<Color, ProgressValue>
+    movesInTurn: number;
+    progress: Progress;
 }
 
 export interface Point {
@@ -44,9 +49,9 @@ export type UnixTimestamp = number;
 
 export type Uuid4 = string;
 
-export type MenuOption = "resume" | "pause" | "saveReplay" | "loadReplay" | "quitGame" | "newGame";
+export type MenuOption = "resume" | "pause" | "quitGame" | "newGame"; // "saveReplay" | "loadReplay"
 
-export type GameStatus = "mainMenu" | "loading" | "inProgress";
+export type GameStatus = "mainMenu" | "inProgress" | "lobby";
 
 export type GameType = "singlePlayer" | "multiPlayer" | "replay";
 
@@ -65,9 +70,21 @@ export type PlayerHexyPairs = [
     PlayerHexyPair | undefined,
 ];
 
+export interface DrawableHexy {
+    color: Color;
+}
+
+export type DrawableHexyPair = [DrawableHexy, DrawableHexy];
+
+export type DrawableHexyPairs = DrawableHexyPair[];
+
+export type SpecialCorners = [BoardHexy, BoardHexy, BoardHexy, BoardHexy, BoardHexy, BoardHexy];
+
 export interface Game {
+    gameId: Uuid4;
     hexyPairs: BoardHexyPairs;
     player: Player;
+    drawableHexyPairs: DrawableHexyPairs;
     alliesAndOpponents: Player[];
     boardSize: BoardSize;
     startTime: UnixTimestamp;
@@ -99,7 +116,9 @@ export interface GenialUiState {
     game: Game;
 }
 
-export interface ThunkExtraArguments {}
+export interface ThunkExtraArguments {
+    Api: typeof Api;
+}
 
 export type Dispatch<S = GenialUiState, E = ThunkExtraArguments> = (
     action: { type: typeof SET_GENIAL_UI_STATE; payload: GenialUiState; } | Thunk<S, E>

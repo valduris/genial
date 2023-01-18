@@ -1,8 +1,17 @@
 import { initialize, InitializeResult } from "../index";
-import { onBoardHexyMouseEnter, onPlayerHexyPairClick, selectPlayerSelectedHexyPair } from "../GenialUi";
+import { onPlayerHexyPairClick } from "../GenialUi";
+import { selectPlayerSelectedHexyPair } from "../selectors";
+import { onBoardHexyMouseEnter } from "../components/Board";
+
+// beforeAll(() => {
+//     const mGetRandomValues = jest.fn().mockReturnValueOnce(new Uint8Array(10));
+//     Object.defineProperty(window, "crypto", {
+//         value: { getRandomValues: mGetRandomValues },
+//     });
+// });
 
 describe("full-game, multi-step, headless integration test", () => {
-    it ("x", async () => {
+    it ("happy path case", async () => {
         const initializeResult: InitializeResult = await initialize({ startTime: Date.now() });
         const store = initializeResult.store;
 

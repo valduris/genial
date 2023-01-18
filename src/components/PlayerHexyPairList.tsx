@@ -1,21 +1,21 @@
 import * as React from "react";
 import { connect } from "react-redux";
 import * as classNames from "classnames";
-import { Color, Game, GenialUiState, Player, PlayerHexyPairIndex } from "../types";
+import { Game, GenialUiState, Player, PlayerHexyPairIndex } from "../types";
 import { onPlayerHexyPairClick } from "../GenialUi";
 import { HexyComponent } from "./Hexy";
 
-export interface FooterStateProps {
+export interface PlayerHexyPairListStateProps {
     game: Game;
 }
 
-export interface FooterDispatchProps {
+export interface PlayerHexyPairListDispatchProps {
     onPlayerHexyPairClick: typeof onPlayerHexyPairClick;
 }
 
-export type FooterProps = FooterDispatchProps & FooterStateProps;
+export type PlayerHexyPairListProps = PlayerHexyPairListDispatchProps & PlayerHexyPairListStateProps;
 
-export function Footer(props: FooterProps) {
+export function PlayerHexyPairList(props: PlayerHexyPairListProps) {
     return (
         <div className={"footer"}>
             <div className={"selectableHexyList"}>
@@ -43,7 +43,7 @@ export function Footer(props: FooterProps) {
                                     cy={90}
                                 />
                             </g>
-                        )
+                        );
                     })}
                 </svg>
             </div>
@@ -51,7 +51,7 @@ export function Footer(props: FooterProps) {
     )
 }
 
-export const FooterConnected = connect<any, any, any, any>(
+export const PlayerHexyPairListConnected = connect<any, any, any, any>(
     (state: GenialUiState) => ({ game: state.game }),
     { onPlayerHexyPairClick: onPlayerHexyPairClick },
-)(Footer);
+)(PlayerHexyPairList);

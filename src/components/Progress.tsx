@@ -1,12 +1,13 @@
 import * as React from "react";
 import { connect } from "react-redux";
 import * as classNames from "classnames";
-import { Game, GenialUiState } from "../types";
-import { COLORS, mapTimes } from "../utils";
+import { DeepPick, Game, GenialUiState } from "../types";
+import { mapTimes } from "../utils";
 import { onPlayerHexyPairClick } from "../GenialUi";
+import { COLORS } from "../consts";
 
 export interface ProgressStateProps {
-    game: Game;
+    game: DeepPick<Game, "player", "progress">;
 }
 
 export type ProgressProps = ProgressStateProps;
@@ -20,7 +21,7 @@ export function Progress(props: ProgressProps) {
                         <div className={"row"} key={color}>
                             <div className={"cell preview"} style={{ background: color }} />
                             {mapTimes(18, (i) => {
-                                const empty = i > props.game.player.progress[color];
+                                const empty = i >= props.game.player.progress[color];
                                 return (
                                     <div
                                         key={i}

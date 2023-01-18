@@ -1,0 +1,45 @@
+.radio-select {
+    width: 20em;
+    height: 2em;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+}
+
+.radio-value {
+    display: flex;
+    color: #222222;
+    background: #cccccc;
+    flex-grow: 1;
+    text-align: center;
+    justify-content: center;
+    vertical-align: middle;
+    line-height: 2.1rem;
+    font-size: 1.5em;
+    box-sizing: border-box;
+    border: 1px solid gray;
+}
+
+.radio-value:first-child {
+    border-radius: 2px 0 0 2px;
+}
+
+.radio-value:last-child {
+    border-radius: 0 2px 2px 0;
+}
+
+.radio-value:hover {
+    border: 1px solid red;
+    background: #61dafb;
+    cursor: pointer;
+}
+
+.radio-value.selected {
+    color: #111111;
+    background: aliceblue;
+}
+
+.radio-value.selected:hover {
+    color: #111111;
+    background: aliceblue;
+}

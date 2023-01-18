@@ -7,15 +7,18 @@ import thunk from "redux-thunk";
 import { initializeGameState } from "./genial";
 import { Game, Thunk, ThunkExtraArguments, UnixTimestamp, GenialUiState, Dispatch } from "./types"
 
-import { GenialUiConnected } from "./GenialUi";
+import { GenialUi } from "./GenialUi";
 import {
     createBoardHexyPair,
     createPromise,
     CreatePromiseReturnType,
-    randomColor, createBoardHexy,
+    createBoardHexy,
+    uuid4,
+    createHexy
 } from "./utils";
 import { GENIAL_GLOBAL } from "./global";
 import { SET_GENIAL_UI_STATE } from "./consts";
+import { Api } from "./api";
 
 export function setGenialUiStatePlain(state: GenialUiState) {
     return {
@@ -26,7 +29,6 @@ export function setGenialUiStatePlain(state: GenialUiState) {
 
 export function setGenialUiState(state: DeepPartial<GenialUiState>): Thunk {
     return (dispatch, getState) => {
-        // console.log("setGenialUiState", state);
         dispatch(setGenialUiStatePlain(Object.assign({}, getState(), state)));
     };
 }
@@ -67,7 +69,7 @@ export function onGameKeyDown(keyCode: number, initializeResult: InitializeResul
             const selectedEntry = game.menu.entries[game.menu.selectedEntryIndex];
             if (selectedEntry === "resume") {
                 game.menu.open = false;
-            } else if (selectedEntry === "saveReplay") {
+            // } else if (selectedEntry === "saveReplay") {
                 // const anchor = document.createElement("a");
                 // const encodedDownload = "data:text/json;charset=utf-8," + encodeURIComponent(
                 //     JSON.stringify(createReplayFileFromGameHistory(game))
@@ -76,7 +78,7 @@ export function onGameKeyDown(keyCode: number, initializeResult: InitializeResul
                 // anchor.setAttribute("download", replayFileName(game));
                 // anchor.click();
 
-            } else if (selectedEntry === "loadReplay") {
+            // } else if (selectedEntry === "loadReplay") {
                 // game.status = "loading";
                 // initializeResult.gameCreated.then(() => {
                 //     initializeResult.dispose().promise.then(() => {
@@ -114,26 +116,19 @@ export interface InitializeResult {
 export async function initialize(params: { startTime: UnixTimestamp; }): Promise<InitializeResult> {
     const rootNode = document.getElementById("root") as HTMLDivElement;
     const game = initializeGameState({
+        gameId: "eb6a6aa6-4cbe-459f-bee7-c78478a95c36",
+        boardSize: 8,
         startTime: params.startTime,
         hexyPairs: [
-            createBoardHexyPair(
-                createBoardHexy(1, 1, "red"),
-                createBoardHexy(1, 2, "red"),
-            ),
-            createBoardHexyPair(
-                createBoardHexy(4, 1, "blue"),
-                createBoardHexy(5, 1, "green"),
-            ),
-            createBoardHexyPair(
-                createBoardHexy(7, 4, "yellow"),
-                createBoardHexy(7, 3, "orange"),
-            ),
+            createBoardHexyPair(createBoardHexy(1, 1, "blue"), createBoardHexy(2, 1, "orange")),
         ],
         type: "singlePlayer",
         status: "inProgress",
     });
     const initialUiState = { game: game };
-    const thunkExtraArguments: ThunkExtraArguments = {};
+    const thunkExtraArguments: ThunkExtraArguments = {
+        Api: Api,
+    };
     const rootReducer = createGenialUiReducer(initialUiState);
     const middlewares = applyMiddleware(thunk.withExtraArgument(thunkExtraArguments));
     const store = createStore(rootReducer, middlewares);
@@ -143,7 +138,7 @@ export async function initialize(params: { startTime: UnixTimestamp; }): Promise
 
         reactRoot.render(
             <Provider store={store}>
-                <GenialUiConnected/>
+                <GenialUi />
             </Provider>
         );
     }

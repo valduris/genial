@@ -1,24 +1,22 @@
-import './Genial.css';
+import "./Genial.css";
 import {
-    BoardHexyPairs, Game, GameStatus, GameType, Player, PlayerHexyPairs, UnixTimestamp
+    BoardHexyPairs, BoardSize, Game, GameStatus, GameType, Player, PlayerHexyPairs, UnixTimestamp
 } from "./types";
-import { createPlayerHexyPair, getMenuOptionsByGameTypeAndStatus, randomColor } from "./utils";
+import {
+    createDrawableHexyPairs,
+    createEmptyProgress,
+    createPlayerHexyPair,
+    getMenuOptionsByGameTypeAndStatus,
+} from "./utils";
 
 export function createPlayer(args: { name: string; hexyPairs: PlayerHexyPairs }): Player {
     return {
         hexyPairs: args.hexyPairs,
         name: args.name,
         hoveredHexyCoords: undefined,
-        turn: true,
+        movesInTurn: 1,
         firstPlacedHexy: undefined,
-        progress: {
-            blue: 10,
-            red: 1,
-            green: 4,
-            orange: 7,
-            violet: 18,
-            yellow: 9,
-        },
+        progress: createEmptyProgress(),
     };
 }
 
@@ -27,6 +25,8 @@ export function initializeGameState(params: {
     hexyPairs: BoardHexyPairs;
     type: GameType;
     status: GameStatus;
+    boardSize: BoardSize;
+    gameId: string;
 }): Game {
     const team0Player0 = createPlayer({
         name: "Human player",
@@ -55,9 +55,10 @@ export function initializeGameState(params: {
     const initialGameState = {
         player: team0Player0,
         alliesAndOpponents: [team1player0],
-        hexyPairs: [],
-        boardSize: 6 as const,
+        hexyPairs: params.hexyPairs,
+        boardSize: params.boardSize,
         startTime: params.startTime,
+        drawableHexyPairs: createDrawableHexyPairs(),
         // history: [],
         menu: {
             open: false,
@@ -66,6 +67,7 @@ export function initializeGameState(params: {
         },
         type: params.type,
         status: params.status,
+        gameId: params.gameId,
     };
 
     return initialGameState;

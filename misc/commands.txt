@@ -1,0 +1,9 @@
+cd ~/src/ģeniāli
+yarn start
+
+cd ~/src/ģeniāli
+npx prisma studio
+npx ts-node --esm prisma/servak.ts
+
+npx prisma migrate dev --name init
+

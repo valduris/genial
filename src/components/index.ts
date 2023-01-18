@@ -1,3 +1,3 @@
 export { HexyComponent } from "./Hexy";
-export { FooterConnected } from "./Footer";
+export { PlayerHexyPairListConnected } from "./PlayerHexyPairList";
 export { ProgressConnected } from "./Progress";

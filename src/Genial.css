@@ -44,6 +44,11 @@
 
 }
 
+.genial .svg-container {
+  width: 50rem;
+  border: 1px solid blue;
+}
+
 .genial .atlas .atlasHexy.handCursor {
   cursor: pointer;
 }
