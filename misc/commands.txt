@@ -5,5 +5,9 @@ cd ~/src/ģeniāli
 npx prisma studio
 npx ts-node --esm prisma/servak.ts
 
-npx prisma migrate dev --name init
+npx prisma migrate dev
+
+# PSQL
+psql -c 'create schema '
+psql -c 'select * from test;'
 

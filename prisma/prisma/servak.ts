@@ -1,186 +1,225 @@
-import { Request } from "express"
-import express from "express"
-import bodyParser from "body-parser"
-import cors from "cors"
-import { PrismaClient } from "@prisma/client"
-import { BoardSize } from "../types";
-
-// import { prisma } from "./index";
-
-// console.log("express");
-// console.log(express);
+import { PrismaClient, Game } from "@prisma/client"
+import express, { Request, json } from "express"
+import cors from "cors";
+import { define, object, string, size, number, boolean, validate, Struct } from "superstruct"
+import isUuid from "is-uuid"
+import isEmail from "is-email"
+import { Progress, Uuid4 } from "../types";
 
 const app = express();
-
-app.use(bodyParser.json())
-
 const prisma = new PrismaClient();
 
-app.get("/api/placeHexyPairOnBoard2", cors(), async (req, res) => {
-    const result = await prisma.user.findMany({
-        include: {
-            game: true,
-            profile: true,
-        },
-    });
+app.use(json());
+app.use(cors())
 
-    return res.json(result);
-})
-
-export interface GamePostParams {
-    boardSize: BoardSize;
-    name: string;
-    public: boolean;
-    showProgress: boolean;
-    playerUuid: string;
+export interface GenialGlobal {
+    serverSentEventsClientCount: number;
 }
 
-app.post("/api/game", cors(), async (req: Request<{}, {}, GamePostParams, {}>, res) => {
-    const { boardSize, name, public, playerUuid, showProgress } = req.params;
+export const GENIAL_GLOBAL: GenialGlobal = {
+    serverSentEventsClientCount: 0,
+}
 
-    if (
-        ![6, 7, 8].includes(boardSize)
-        || name.length > 128
-        || typeof public !== "boolean"
-        || typeof showProgress !== "boolean"
-        || !(typeof playerUuid === "string" && playerUuid.length > 128) // TODO isUuid util
-    ) {
+export type GamePostParams = Pick<Game, "boardSize" | "name" | "public" | "showProgress" | "authorId" | "playerCount"> & { playerUuid: string };
+
+const Email = define("Email", isEmail)
+const Uuid = define("Uuid", isUuid.v4)
+
+export type Method = "GET" | "POST" | "DELETE" | "OPTIONS" | "PATCH" | "PUT";
+
+export type Validators = { [key in Method]: Record<string, Struct>; };
+
+// export interface PostApiGameJoinParams {
+//     playerUuid: Uuid4;
+//     gameUuid: Uuid4;
+// }
+
+export const VALIDATORS: Validators = {
+    PUT: {},
+    DELETE: {},
+    GET: {},
+    OPTIONS: {},
+    PATCH: {},
+    POST: {
+        "/api/game": object({
+            authorId: number(),
+            playerCount: size(number(), 2, 4),
+            playerUuid: Uuid,
+            public: boolean(),
+            showProgress: boolean(),
+            name: size(string(), 1, 50),
+            boardSize: size(number(), 6, 8),
+        }),
+        "/api/game/join": object({
+            playerUuid: Uuid,
+            gameUuid: Uuid,
+        }),
+    },
+};
+
+export function isRequestValid(req: Pick<Request, "url" | "method" | "body">): boolean {
+    const validator = VALIDATORS[req.method][req.url];
+
+    if (!validator) {
+        console.error(`Validator not found for ${req.method} ${req.url}`);
+        return false;
+    }
+
+    const [error] = validate(req.body, validator);
+
+    if (error && process.env.BUILD_MODE === "development") {
+        console.error(error);
+    }
+
+    return error === undefined;
+}
+
+// const options = {
+//     origin: "http://localhost:3000",
+// }
+// if (process.env.BUILD_MODE === "development") {
+//     app.use(cors(options))
+// }
+
+app.options("/api/game", cors()) // enable pre-flight request for POST request
+
+app.post("/api/game", async (req: Request<{}, {}, GamePostParams, {}>, res) => {
+    if (!isRequestValid(req)) {
         res.json({ error: "Invalid request parameters" });
     }
 
-
     const game = await prisma.game.create({
         data: {
-            boardSize: boardSize,
-            name: name,
-            public: public,
-            authorId: playerUuid,
-            showProgress: showProgress,
+            authorId: req.body.authorId,
+            public: req.body.public,
+            showProgress: req.body.showProgress,
+            name: req.body.name,
+            boardSize: req.body.boardSize,
+            playerCount: req.body.playerCount,
             players: {
-                connect: [{ uuid: playerUuid }]
+                connectOrCreate: {
+                    where: { uuid: req.body.playerUuid },
+                    create: { uuid: req.body.playerUuid },
+                },
             },
         },
     });
 
     return res.json(game);
-})
+});
 
-app.get("/api/placeHexyPairOnBoard", cors(), async (req: Request<{}, {}, {}, { playerUuid: string; }>, res) => {
+app.post("/api/game/join", async (req: Request<{}, {}, { gameUuid: Uuid4; playerUuid: Uuid4; }, {}>, res) => {
+    if (!isRequestValid(req)) {
+        res.json({ error: "Invalid request parameters" });
+    }
+
+    const game = await prisma.game.update({
+        where: {
+            uuid: req.body.gameUuid,
+        },
+        data: {
+            players: {
+                connectOrCreate: {
+                    where: { uuid: req.body.playerUuid },
+                    create: { uuid: req.body.playerUuid },
+                },
+            },
+        },
+        select: {
+            authorId: true,
+            boardSize: true,
+            createdAt: true,
+            finished: true,
+            players: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
+            name: true,
+            playerCount: true,
+            public: true,
+            showProgress: true,
+            status: true,
+            uuid: true,
+        },
+    });
+
+    return res.json(game);
+});
+
+app.get("/api/games", async (req: Request<{}, {}, {}, {}>, res) => {
+    res.json(await prisma.game.findMany({
+        where: {
+            status: "Created",
+        },
+        select: {
+            uuid: true,
+            name: true,
+            boardSize: true,
+            playerCount: true,
+            players: {
+                select: {
+                    id: true,
+                    name: true,
+                },
+            },
+        },
+    }));
+});
+
+app.get("/events", async function(req, res) {
+    GENIAL_GLOBAL.serverSentEventsClientCount += 1;
+
+    console.log("GENIAL_GLOBAL.serverSentEventsClientCount", GENIAL_GLOBAL.serverSentEventsClientCount);
+    res.set({
+        "Cache-Control": "no-cache",
+        "Content-Type": "text/event-stream",
+        "Connection": "keep-alive",
+    });
+    res.flushHeaders();
+    res.write("retry: 5000\n\n");
+
+    let count = 0;
+    let timerId;
+
+    res.on("close", () => {
+        GENIAL_GLOBAL.serverSentEventsClientCount -= 1;
+        console.log("GENIAL_GLOBAL.serverSentEventsClientCount", GENIAL_GLOBAL.serverSentEventsClientCount);
+        console.log("client dropped me");
+        clearTimeout(timerId);
+        res.end();
+    });
+
+    while (true) {
+        await new Promise<void>(resolve => {
+            timerId = global.setTimeout(() => {
+                console.log("Emit", ++count);
+                res.write(`data: ${JSON.stringify({countYes: count})}\n\n`);
+                resolve();
+            }, 1000);
+        })
+    }
+});
+
+app.post("/api/game/placeHexy", cors(), async (req: Request<{}, {}, {}, { playerUuid: string; gameUuid: Uuid4; }>, res) => {
+    /**
+     * 1) validate input & check if player had move
+     * 2) update game state - add hexy on board, calculate player's progress
+     * 3) update state of all clients by sending updated server state, check for important differences if necessary
+     * 4) check if game over and publish results
+     */
+
     console.log("playerUuid", req.query.playerUuid);
     const player = await prisma.user.findUnique({
         where: { uuid: req.query.playerUuid },
         include: { game: true },
     });
 
+    console.log("player" ,player);
+
     return res.json(player);
-
-
-    // if (
-    //     user.extendedPetsData &&
-    //     typeof user.extendedPetsData === 'object' &&
-    //     !Array.isArray(user.extendedPetsData)
-    // ) {
-    //     const petsObject = user.extendedPetsData as Prisma.JsonObject
-    //
-    //     const i = petsObject['insurances']
-    //
-    //     if (i && typeof i === 'object' && Array.isArray(i)) {
-    //         const insurancesArray = i as Prisma.JsonArray
-    //
-    //         insurancesArray.forEach((i) => {
-    //             if (i && typeof i === 'object' && !Array.isArray(i)) {
-    //                 const insuranceObject = i as Prisma.JsonObject
-    //
-    //                 insuranceObject['status'] = 'expired'
-    //             }
-    //         })
-    //
-    //         const whereClause = Prisma.validator<Prisma.UserWhereInput>()({
-    //             id: user.id,
-    //         })
-    //
-    //         const dataClause = Prisma.validator<Prisma.UserUpdateInput>()({
-    //             extendedPetsData: petsObject,
-    //         })
-    //
-    //         userQueries.push(
-    //             prisma.user.update({
-    //                 where: whereClause,
-    //                 data: dataClause,
-    //             })
-    //         )
-    //     }
-    // }
 });
-
-app.post("/api/joinGame", cors(), async (req: Request<{}, {}, { uuid: string; }, {}>, res) => {
-    const game = await prisma.game.findUnique({
-        where: { uuid: req.body.uuid } as any,
-        include: { players: true },
-    });
-
-    // game.
-
-    return res.json(game);
-});
-
-    // const result = await prisma.createUser({
-    //     ...req.body,
-    // })
-    // res.json(result);
-
-// app.post(`/post`, async (req, res) => {
-//     const { title, content, authorEmail } = req.body
-//     const result = await prisma.createPost({
-//         title: title,
-//         content: content,
-//         author: { connect: { email: authorEmail } },
-//     })
-//     res.json(result)
-// })
-//
-// app.put("/publish/:id", async (req, res) => {
-//     const { id } = req.params
-//     const post = await prisma.updatePost({
-//         where: { id },
-//         data: { published: true },
-//     })
-//     res.json(post)
-// })
-//
-// app.delete(`/post/:id`, async (req, res) => {
-//     const { id } = req.params
-//     const post = await prisma.deletePost({ id })
-//     res.json(post)
-// })
-//
-// app.get(`/post/:id`, async (req, res) => {
-//     const { id } = req.params
-//     const post = await prisma.post({ id })
-//     res.json(post)
-// })
-//
-// app.get("/feed", async (req, res) => {
-//     const posts = await prisma.post({ where: { published: true } })
-//     res.json(posts)
-// })
-//
-// app.get("/filterPosts", async (req, res) => {
-//     const { searchString } = req.query
-//     const draftPosts = await prisma.post({
-//         where: {
-//             OR: [
-//                 {
-//                     title_contains: searchString,
-//                 },
-//                 {
-//                     content_contains: searchString,
-//                 },
-//             ],
-//         },
-//     })
-//     res.json(draftPosts)
-// })
 
 app.listen(3300, () => {
     console.log("Server is running on http://localhost:3300");

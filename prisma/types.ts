@@ -22,6 +22,10 @@ export type SpecialCorners = [BoardHexy, BoardHexy, BoardHexy, BoardHexy, BoardH
 
 export type HexColor = string;
 
+export type Progress = Record<Color, ProgressValue>;
+
+export type Uuid4 = string;
+
 type DeepPick3<A, B extends keyof A, C extends keyof A[B]> = { [BK in B]: Pick<A[B], C> };
 
 type DeepPick4<A, B extends keyof A, C extends keyof A[B], D extends keyof A[B][C]> = {

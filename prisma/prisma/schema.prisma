@@ -12,12 +12,12 @@ datasource db {
 
 model Game {
   id           Int         @id @default(autoincrement())
-  uuid         String      @default(uuid())
+  uuid         String      @default(uuid()) @unique
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   boardSize    Int
+  playerCount  Int
   hexyPairs    Json        @default("[]")
-  progress     Json        @default("[]")
   name         String      @db.VarChar(255)
   public       Boolean     @default(false)
   authorId     Int
@@ -34,20 +34,14 @@ enum GameStatus {
   Cancelled
 }
 
-model Profile {
-  id     Int     @id @default(autoincrement())
-  bio    String?
-  user   User    @relation(fields: [userId], references: [id])
-  userId Int     @unique
-}
-
 model User {
-  id      Int      @id @default(autoincrement())
-  uuid    String   @unique @default(uuid())
-  email   String   @unique
-  turn    Boolean  @default(false)
-  name    String
-  game    Game?    @relation(fields: [gameId], references: [id])
-  gameId  Int?
-  profile Profile?
+  id       Int      @id @default(autoincrement())
+  uuid     String   @unique @default(uuid())
+  email    String?  @unique
+  gameId   Int?
+  name     String?
+  game     Game?    @relation(fields: [gameId], references: [id])
+  progress Json     @default("[]")
+  password String?
+  ready    Boolean? @default(false)
 }
