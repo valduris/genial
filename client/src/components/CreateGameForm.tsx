@@ -1,13 +1,12 @@
-import * as React from "react";
 import { connect } from "react-redux";
 import * as immer from "immer";
+import * as classNames from "classnames";
+import * as React from "react";
 
-import { RadioSelect } from "./RadioSelect";
 import { translate } from "../utils";
-import { Game, GameStatus, GenialLobby, Thunk, Uuid4 } from "../types";
+import { GameStatus, GenialLobby, Thunk } from "../types";
 import { GamePostParams } from "../types/server";
 
-import "./CreateGameForm.css";
 import { setGenialState } from "../index";
 import { selectPlayerUuid } from "../selectors";
 
@@ -46,71 +45,140 @@ export function CreateGameForm(props: CreateGameFormProps) {
     }, [setFormState]);
 
     return (
-        <div className={"create-game-form"}>
-            <h1 className={"title"}>Create new game</h1>
-            <div className={"form-row"}>
-                <span
-                    onClick={() => setFormState({
-                        ...formState,
-                        boardSize: getNextElementFromArray([6, 7, 8], formState.boardSize),
-                    })}
-                >
-                    {translate("boardSize")}
-                </span>
-                <RadioSelect<Game["boardSize"]>
-                    values={[6, 7, 8]}
-                    onClick={(value) => setValueInFormState({ boardSize: value })}
-                    selectedValue={formState.boardSize}
-                />
+        <>
+            <div className="field is-horizontal">
+                <div className="field-label is-normal">
+                    <label
+                        className="label"
+                        onClick={() => setFormState({
+                            ...formState,
+                            playerCount: getNextElementFromArray([2, 3, 4], formState.playerCount),
+                        })}
+                    >
+                        {translate("playerCount")}
+                    </label>
+                </div>
+                <div className="field-body">
+                    <div className="buttons has-addons">
+                        {[2, 3, 4].map(n => {
+                            return (
+                                <button
+                                    key={n}
+                                    className={classNames("button", {
+                                        "is-info": formState.playerCount === n,
+                                        "is-selected": formState.playerCount === n,
+                                    })}
+                                    onClick={() => setValueInFormState({ playerCount: n })
+                                }>
+                                    {n}
+                                </button>
+                            )
+                        })}
+                    </div>
+                </div>
             </div>
-            <div className={"form-row"}>
-                <span
-                    onClick={() => setFormState({
-                        ...formState,
-                        playerCount: getNextElementFromArray([2, 3, 4], formState.playerCount),
-                    })}
-                >
-                    {translate("playerCount")}
-                </span>
-                <RadioSelect<2 | 3 | 4>
-                    values={[2, 3, 4]}
-                    onClick={(value) => setValueInFormState({ playerCount: value })}
-                    selectedValue={formState.playerCount}
-                />
+            <div className="field is-horizontal">
+                <div className="field-label is-normal">
+                    <label
+                        className="label"
+                        onClick={() => setFormState({
+                            ...formState,
+                            boardSize: getNextElementFromArray([6, 7, 8], formState.boardSize),
+                        })}
+                    >
+                        {translate("boardSize")}
+                    </label>
+                </div>
+                <div className="field-body">
+                    <div className="buttons has-addons">
+                        {[6, 7, 8].map(n => {
+                            return (
+                                <button
+                                    key={n}
+                                    className={classNames("button", {
+                                        "is-info": formState.boardSize === n,
+                                        "is-selected": formState.boardSize === n,
+                                    })}
+                                    onClick={() => setValueInFormState({ boardSize: n })}
+                                >
+                                    {n}
+                                </button>
+                            )
+                        })}
+                    </div>
+                </div>
             </div>
-            <div className={"form-row"}>
-                <label htmlFor={"createGameFormPublic"}>{translate("public")}</label>
-                <input
-                    id={"createGameFormPublic"}
-                    type={"checkbox"}
-                    checked={formState.public}
-                    onChange={event => setValueInFormState({ public: event?.target.checked })}
-                />
+            <div className="field is-horizontal">
+                <div className="field-label">
+                    <label
+                        className="label"
+                        onClick={() => setValueInFormState({ public: !formState.public })}
+                    >
+                        {translate("public")}
+                    </label>
+                </div>
+                <div className="field-body">
+                    <div className="field is-narrow">
+                        <div className="control">
+                            <label className="radio">
+                                <input
+                                    type="checkbox"
+                                    checked={formState.public}
+                                    onChange={() => setValueInFormState({ public: !formState.public })}
+                                />
+                            </label>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div className={"form-row"}>
-                <label htmlFor={"createGameFormShowProgress"}>{translate("showProgress")}</label>
-                <input
-                    id={"createGameFormShowProgress"}
-                    type={"checkbox"}
-                    checked={formState.showProgress}
-                    onChange={event => setValueInFormState({ showProgress: event?.target.checked })}
-                />
+            <div className="field is-horizontal">
+                <div className="field-label">
+                    <label
+                        className="label"
+                        onClick={() => setValueInFormState({ showProgress: !formState.showProgress })}
+                    >
+                        {translate("showProgress")}
+                    </label>
+                </div>
+                <div className="field-body">
+                    <div className="field is-narrow">
+                        <div className="control">
+                            <label className="radio">
+                                <input
+                                    type="checkbox"
+                                    checked={formState.showProgress}
+                                    onChange={() => setValueInFormState({ showProgress: !formState.showProgress })}
+                                />
+                            </label>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div className={"form-row"}>
-                <label htmlFor={"createGameFormName"}>{translate("gameName")}</label>
-                <input
-                    id={"createGameFormName"}
-                    type={"text"}
-                    onChange={event => setValueInFormState({ name: event?.target.value })}
-                />
+            <div className="field is-horizontal">
+                <div className="field-label is-normal">
+                    <label className="label">{translate("gameName")}</label>
+                </div>
+                <div className="field-body">
+                    <div className="field">
+                        <div className="control">
+                            <input className="input" type="text" />
+                        </div>
+                    </div>
+                </div>
             </div>
-            <input
-                className="submit"
-                type="button"
-                onClick={() => props.onSubmit(formState)}
-                value={translate("createGame")}
-            />
-        </div>
+            <div className="field is-horizontal">
+                <div className="field-label is-normal" />
+                <div className="field-body">
+                    <button
+                        className="button is-link"
+                        onClick={() => props.onSubmit(formState)}
+                        value={formState.name}
+                    >
+                        {translate("createGame")}
+                    </button>
+                </div>
+            </div>
+        </>
     );
 }
 

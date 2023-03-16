@@ -40,7 +40,6 @@ export function GenialUi(props: GenialUiStateProps) {
 
 export const GenialUiConnected = connect<any, any, any, any>((state: GenialLobby) => ({
     game: state.game,
-    loadingState: state.loadingState,
     status: state.status,
 }))(GenialUi);
 
