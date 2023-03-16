@@ -3,12 +3,20 @@ import { LogLevel } from "./types";
 
 export type BuildMode = "production" | "development";
 
+const LogLevelToSymbol = {
+    [LogLevel.Info]: "<I>",
+    [LogLevel.Verbose]: "<V>",
+    [LogLevel.Warn]: "<W>",
+    [LogLevel.Error]: "<E>",
+    [LogLevel.Exclusive]: "<Exclusive>",
+}
+
 export function log(logLevel: LogLevel, message: Parameters<typeof console.log>): void {
     if (
         (logLevel <= GENIAL_GLOBAL.logLevel && !GENIAL_GLOBAL.exclusiveMode)
         || logLevel === LogLevel.Exclusive
     ) {
-        console.log(...message);
+        console.log(LogLevelToSymbol[logLevel], ...message);
     }
 }
 

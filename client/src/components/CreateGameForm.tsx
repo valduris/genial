@@ -1,19 +1,24 @@
 import * as React from "react";
 import { connect } from "react-redux";
+import * as immer from "immer";
 
 import { RadioSelect } from "./RadioSelect";
 import { translate } from "../utils";
-import { Game, Thunk } from "../types";
-import { CreateGameParams } from "../api";
+import { Game, GameStatus, GenialLobby, Thunk, Uuid4 } from "../types";
+import { GamePostParams } from "../types/server";
 
 import "./CreateGameForm.css";
+import { setGenialState } from "../index";
+import { selectPlayerUuid } from "../selectors";
 
 export interface CreateGameFormOwnProps {
     visible: boolean;
 }
 
+export type CreateGameFormFormState = Pick<GamePostParams, "boardSize" | "playerCount" | "public" | "showProgress" | "name">;
+
 export interface CreateGameFormDispatchProps {
-    onSubmit: (data: Omit<CreateGameParams, "authorId">) => void;
+    onSubmit: (data: CreateGameFormFormState) => void;
 }
 
 export type CreateGameFormProps = CreateGameFormOwnProps & CreateGameFormDispatchProps;
@@ -28,7 +33,7 @@ export function getNextElementFromArray<T>(array: T[], current: T): T {
 }
 
 export function CreateGameForm(props: CreateGameFormProps) {
-    const [formState, setFormState] = React.useState<Omit<CreateGameParams, "authorId">>({
+    const [formState, setFormState] = React.useState<CreateGameFormFormState>({
         boardSize: 6,
         playerCount: 3,
         public: true,
@@ -36,7 +41,7 @@ export function CreateGameForm(props: CreateGameFormProps) {
         name: undefined,
     });
 
-    const setValueInFormState = React.useCallback((value: Partial<Omit<CreateGameParams, "authorId">>) => {
+    const setValueInFormState = React.useCallback((value: Partial<Omit<GamePostParams, "authorId">>) => {
         setFormState(prevState => ({ ...prevState, ...value }));
     }, [setFormState]);
 
@@ -111,14 +116,19 @@ export function CreateGameForm(props: CreateGameFormProps) {
 
 export const CreateGameFormConnected = connect<any, any, any, any>(undefined, { onSubmit: onCreateGameFormSubmit })(CreateGameForm);
 
-export function onCreateGameFormSubmit(data: CreateGameParams): Thunk {
-    return async (dispatch, getState, { Api }) => {
-        const result = await Api.createGame({
-            ...data,
-            playerUuid: "7a118f32-c183-49d0-b06b-6353148fc162",
-            authorId: 1,
-            name: "customName",
-        });
+export function onCreateGameFormSubmit(data: CreateGameFormFormState): Thunk<GenialLobby> {
+    return async (dispatch, getState, { fetchJson }) => {
+        const playerUuid = selectPlayerUuid(getState());
+        const body: GamePostParams = { ...data, adminUuid: playerUuid };
+        const result = await fetchJson("http://localhost:3300/api/game", { body: JSON.stringify(body) });
         console.log(result);
+        dispatch(setGenialState(immer.produce(getState(), state => {
+            state.game = {
+                ...result,
+                finished: false,
+                status: GameStatus.Lobby,
+            };
+        })));
+        console.log("onCreateGameFormSubmit", getState());
     };
 }

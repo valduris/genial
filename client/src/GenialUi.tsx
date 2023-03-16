@@ -1,4 +1,4 @@
-import * as immer from "immer"
+import * as immer from "immer";
 import * as React from "react";
 
 import { Thunk, PlayerHexyPairIndex, GenialInProgress, GameStatus } from "./types"
@@ -6,6 +6,7 @@ import { setGenialState } from "./index";
 import { LobbyGameListConnected, PlayerHexyPairListConnected, ProgressConnected } from "./components";
 import { BoardConnected } from "./components/Board";
 import { CreateGameFormConnected } from "./components/CreateGameForm";
+import { LobbyGameConnected } from "./components/lobbyGame/LobbyGame";
 
 export function GenialUi(props: { status: GameStatus; }) {
     return (
@@ -14,6 +15,7 @@ export function GenialUi(props: { status: GameStatus; }) {
                 <>
                     <CreateGameFormConnected />
                     <LobbyGameListConnected />
+                    <LobbyGameConnected />
                 </>
             )}
             {props.status === GameStatus.InProgress && (

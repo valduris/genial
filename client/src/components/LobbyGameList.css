@@ -37,6 +37,10 @@
     border-right: 1px solid gray;
 }
 
+.game-list .row .noGames {
+    padding-left: 0.4em;
+}
+
 .game-list .row .name {
     display: flex;
     flex-basis: 20rem;

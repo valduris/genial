@@ -3,14 +3,13 @@ import { connect } from "react-redux";
 
 import { translate } from "../../utils";
 import { GamesLoadingState, GenialLobby, LobbyGames, Thunk, Uuid4 } from "../../types";
-import { log } from "../../log";
 
 import "./LobbyGame.css";
-import { selectPlayerUuid } from "../../selectors";
 import { setGenialState } from "../../index";
 
 export interface LobbyGameStateProps {
     games: LobbyGames;
+    game: Pick<GenialLobby, "game">;
 }
 
 export interface LobbyGameDispatchProps {
@@ -20,6 +19,10 @@ export interface LobbyGameDispatchProps {
 export type LobbyGameProps = LobbyGameStateProps & LobbyGameDispatchProps;
 
 export function LobbyGame(props: LobbyGameProps) {
+    if (!props.game) {
+        return null;
+    }
+
     return (
         <div className={"game-list"}>
             <div className={"row"}>
@@ -33,16 +36,17 @@ export function LobbyGame(props: LobbyGameProps) {
 
 export const LobbyGameConnected = connect<any, any, any, any>((state: GenialLobby) => ({
     games: state.games,
+    game: state.game,
     loadingState: state.loadingState,
 }), { onJoinGame: onJoinGame })(LobbyGame);
 
 export function onJoinGame(gameUuid: Uuid4): Thunk {
     return async (dispatch, getState, { Api }) => {
-        const result = await Api.joinGame({
-            gameUuid: gameUuid,
-            playerUuid: selectPlayerUuid(getState()),
-        });
+        // const result = await Api.joinGame({
+        //     gameUuid: gameUuid,
+        //     playerUuid: selectPlayerUuid(getState()),
+        // });
         dispatch(setGenialState({}));
-        log.info(result);
+        // log.info(result);
     };
 }

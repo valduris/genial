@@ -3,6 +3,7 @@ import * as ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
 import { applyMiddleware, createStore, DeepPartial } from "redux";
 import thunk from "redux-thunk";
+// import { ApiGames } from "../../server/src/index";
 import {
     Dispatch,
     EventSourceState,
@@ -22,6 +23,7 @@ import { Api, fetchJson } from "./api";
 
 import "./Genial.css";
 import { uuid4 } from "./utils";
+import { ApiGames } from "./types/server";
 
 export function setGenialStatePlain(state: Genial) {
     return {
@@ -139,7 +141,9 @@ export async function initialize(): Promise<InitializeResult> {
 
     GENIAL_GLOBAL.store = store;
 
-    fetchJson("http://localhost:3300/api/games", { method: "GET" }).then((games: LobbyGames) => {
+    const games: ApiGames = [{}];
+
+    fetchJson("http://localhost:3300/api/games", { method: "GET" }).then((games: ApiGames) => {
         store.dispatch(setGenialState({ games: games, loadingState: games.length > 0 ? "loaded" : "noGames" }));
     });
 

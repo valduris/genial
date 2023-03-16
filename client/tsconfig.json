@@ -12,5 +12,6 @@
     "pretty": false,
     "skipLibCheck": true,
     "strict": true
-  }
+  },
+  "include": ["../server/node_modules/.prisma/client", "../server/src/queries"]
 }

@@ -1,13 +1,15 @@
 import * as React from "react";
 import { connect } from "react-redux";
+import * as immer from "immer";
 
 import { translate } from "../utils";
-import { GamesLoadingState, GenialLobby, LobbyGames, Thunk, Uuid4 } from "../types";
+import { GamesLoadingState, GameStatus, GenialLobby, LobbyGames, Thunk, Uuid4 } from "../types";
 import { log } from "../log";
 
 import "./LobbyGameList.css";
 import { selectPlayerUuid } from "../selectors";
 import { setGenialState } from "../index";
+import { apiPostGame } from "../types/server";
 
 export interface LobbyGameListStateProps {
     games: LobbyGames;
@@ -43,7 +45,7 @@ export function LobbyGameList(props: LobbyGameListProps) {
                 return (
                     <div className={"row"} key={game.uuid}>
                         <div className={"boardSize"}>{game.boardSize}</div>
-                        <div className={"playerCount"}>{`? / ${game.playerCount}`}</div>
+                        <div className={"playerCount"}>{`${game.players.length} / ${game.playerCount}`}</div>
                         <div className={"name"}>{game.name}</div>
                         <div className={"join"}>
                             <button onClick={() => props.onJoinGame(game.uuid)}>{translate("joinGame")}</button>
@@ -60,13 +62,26 @@ export const LobbyGameListConnected = connect<any, any, any, any>((state: Genial
     loadingState: state.loadingState,
 }), { onJoinGame: onJoinGame })(LobbyGameList);
 
-export function onJoinGame(gameUuid: Uuid4): Thunk {
-    return async (dispatch, getState, { Api }) => {
-        const result = await Api.joinGame({
+export function onJoinGame(gameUuid: Uuid4): Thunk<GenialLobby> {
+    return async (dispatch, getState, { fetchJson }) => {
+        type JoinGameResult = ReturnType<Awaited<typeof apiPostGame>>;
+
+        log.info("getState() before onJoinGame", getState());
+
+        const params: { gameUuid: Uuid4; playerUuid: Uuid4; } = {
             gameUuid: gameUuid,
             playerUuid: selectPlayerUuid(getState()),
-        });
-        dispatch(setGenialState({}));
+        };
+        const result: JoinGameResult = await fetchJson("http://localhost:3300/api/game/join", { body: JSON.stringify(params) });
         log.info(result);
+        dispatch(setGenialState(immer.produce(getState(), state => {
+            state.game = {
+                ...result,
+                finished: false,
+                status: GameStatus.Lobby,
+            };
+        })));
+
+        log.info("getState()", getState());
     };
 }
