@@ -23,7 +23,6 @@ export interface LobbyGameListDispatchProps {
 export type LobbyGameListProps = LobbyGameListStateProps & LobbyGameListDispatchProps;
 
 export function LobbyGameList(props: LobbyGameListProps) {
-    // TODO long term plan - sticky header
     return (
         <div className={"game-list"}>
             <div className={"row"}>

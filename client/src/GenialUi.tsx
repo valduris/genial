@@ -1,19 +1,28 @@
 import * as immer from "immer";
 import * as React from "react";
+import { connect } from "react-redux";
 
-import { Thunk, PlayerHexyPairIndex, GenialInProgress, GameStatus } from "./types"
+import { Thunk, PlayerHexyPairIndex, GenialInProgress, GameStatus, Genial, GenialLobby } from "./types"
 import { setGenialState } from "./index";
 import { LobbyGameListConnected, PlayerHexyPairListConnected, ProgressConnected } from "./components";
 import { BoardConnected } from "./components/Board";
 import { CreateGameFormConnected } from "./components/CreateGameForm";
 import { LobbyGameConnected } from "./components/lobbyGame/LobbyGame";
+import { Navigation } from "./components/navigation/Navigation";
 
-export function GenialUi(props: { status: GameStatus; }) {
+export interface GenialUiStateProps {
+    status: GameStatus;
+    game: Pick<Genial, "game">;
+}
+
+export function GenialUi(props: GenialUiStateProps) {
     return (
         <div className="genial">
+            <Navigation />
+            <hr />
             {props.status === GameStatus.Lobby && (
                 <>
-                    <CreateGameFormConnected />
+                    {!props.game && <CreateGameFormConnected />}
                     <LobbyGameListConnected />
                     <LobbyGameConnected />
                 </>
@@ -28,6 +37,12 @@ export function GenialUi(props: { status: GameStatus; }) {
         </div>
     );
 }
+
+export const GenialUiConnected = connect<any, any, any, any>((state: GenialLobby) => ({
+    game: state.game,
+    loadingState: state.loadingState,
+    status: state.status,
+}))(GenialUi);
 
 export type OnPlayerHexyPairClickState = GenialInProgress;
 

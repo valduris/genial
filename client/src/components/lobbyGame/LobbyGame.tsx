@@ -2,7 +2,7 @@ import * as React from "react";
 import { connect } from "react-redux";
 
 import { translate } from "../../utils";
-import { GamesLoadingState, GenialLobby, LobbyGames, Thunk, Uuid4 } from "../../types";
+import { GenialLobby, LobbyGames, Thunk, Uuid4 } from "../../types";
 
 import "./LobbyGame.css";
 import { setGenialState } from "../../index";

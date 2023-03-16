@@ -62,7 +62,6 @@ import { BoardHexyPairs, BoardSize, GameStatus, GenialInProgress, PlayerCount, U
 //
 //     const initialGameState = {
 //         player: team0Player0,
-//         alliesAndOpponents: [team1player0],
 //         hexyPairs: params.hexyPairs,
 //         boardSize: params.boardSize,
 //         startTime: params.startTime,

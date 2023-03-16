@@ -3,20 +3,19 @@ import * as ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
 import { applyMiddleware, createStore, DeepPartial } from "redux";
 import thunk from "redux-thunk";
-// import { ApiGames } from "../../server/src/index";
 import {
     Dispatch,
     EventSourceState,
     GameStatus,
     Genial,
     GenialLobby,
-    LobbyGames, LocalStorageKey,
-    PermanentAny, Player,
+    LocalStorageKey,
+    PermanentAny,
     Thunk,
     ThunkExtraArguments, Uuid4
 } from "./types"
 
-import { GenialUi } from "./GenialUi";
+import { GenialUiConnected } from "./GenialUi";
 import { GENIAL_GLOBAL } from "./global";
 import { SET_GENIAL_UI_STATE } from "./consts";
 import { Api, fetchJson } from "./api";
@@ -134,7 +133,7 @@ export async function initialize(): Promise<InitializeResult> {
 
         reactRoot.render(
             <Provider store={store}>
-                <GenialUi status={store.getState().status}/>
+                <GenialUiConnected />
             </Provider>
         );
     }

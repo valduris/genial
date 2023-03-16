@@ -85,15 +85,8 @@ export type DrawableHexyPairs = DrawableHexyPair[];
 export type SpecialCorners = [BoardHexy, BoardHexy, BoardHexy, BoardHexy, BoardHexy, BoardHexy];
 
 export interface GenialInProgress extends GenialCommon {
-    gameId: Uuid4;
-    hexyPairs: BoardHexyPairs;
+    game: Game;
     player: Player;
-    drawableHexyPairs: DrawableHexyPairs;
-    alliesAndOpponents: readonly Player[];
-    boardSize: BoardSize;
-    startTime: UnixTimestamp;
-    playerCount: PlayerCount;
-    status: GameStatus.InProgress;
 }
 
 export interface LobbyGame {
@@ -110,26 +103,28 @@ export type LobbyGames = LobbyGame[];
 
 export type GamesLoadingState = "noGames" | "loading" | "loaded";
 
+export interface Game {
+    authorId: number;
+    boardSize: BoardSize;
+    createdAt: "2023-01-18T09:42:39.417Z";
+    finished: false;
+    players: Array<{
+        id: number;
+        name: string;
+    }>;
+    name: string;
+    playerCount: PlayerCount;
+    public: boolean;
+    showProgress: boolean;
+    status: "Created";
+    uuid: "eb6a6aa6-4cbe-459f-bee7-c78478a95c36"
+}
+
 export interface GenialLobby extends GenialCommon {
     games: LobbyGames;
     status: GameStatus.Lobby;
     loadingState: GamesLoadingState;
-    game?: {
-        authorId: number;
-        boardSize: BoardSize;
-        createdAt: "2023-01-18T09:42:39.417Z";
-        finished: false;
-        players: Array<{
-            id: number;
-            name: string;
-        }>;
-        name: string;
-        playerCount: PlayerCount;
-        public: boolean;
-        showProgress: boolean;
-        status: "Created";
-        uuid: "eb6a6aa6-4cbe-459f-bee7-c78478a95c36"
-    };
+    game?: Game;
 }
 
 export enum EventSourceState {
@@ -150,8 +145,6 @@ export interface GenialCommon {
 }
 
 export type Genial = GenialInProgress | GenialLobby;
-
-export type Game = GenialInProgress;
 
 export type HexColor = string;
 
