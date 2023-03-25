@@ -71,8 +71,8 @@ export function LobbyGame(props: LobbyGameProps) {
                 onSubmit={() => props.onStartGame(props.game.uuid)}
                 value={translate("startGame")}
                 disabled={(
-                    // props.game.players.length !== props.game.playerCount
-                    // ||
+                    props.game.players.length !== props.game.playerCount
+                    ||
                     props.game.adminUuid !== props.playerUuid
                 )}
             />

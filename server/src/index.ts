@@ -55,19 +55,38 @@ app.post("/api/game", async (req: Request<{}, {}, GamePostParams, {}>, res) => {
     return res.json(await apiPostGame(prisma, req.body));
 });
 
-export function invalidRequest(req: Pick<Request, "body">) {
-    if (GENIAL_GLOBAL.buildMode !== "production") {
+export function invalidRequest(req?: Pick<Request, "body">) {
+    if (GENIAL_GLOBAL.buildMode !== "production" && req) {
         return { error: `Invalid request parameters ${JSON.stringify(req.body)}` };
     }
-    return { error: `Invalid request parameters` };
+    return { error: "Invalid request parameters" };
 }
 
 app.post("/api/game/join", async (req: Request<{}, {}, { gameUuid: Uuid4; playerUuid: Uuid4; }, {}>, res) => {
     if (!isRequestValid(req as TemporaryAny)) {
         res.json(invalidRequest(req));
+        return;
     }
 
-    const game = await prisma.game.update({
+    const game = await prisma.game.findUnique({
+        where: { uuid: req.body.gameUuid },
+        select: {
+            uuid: true,
+            playerCount: true,
+            players: {
+                select: {
+                    uuid: true,
+                },
+            },
+        },
+    });
+
+    if (game.players.length === game.playerCount) {
+        res.json(invalidRequest());
+        return;
+    }
+
+    const updatedGame = await prisma.game.update({
         where: { uuid: req.body.gameUuid },
         data: {
             players: {
@@ -94,14 +113,14 @@ app.post("/api/game/join", async (req: Request<{}, {}, { gameUuid: Uuid4; player
         },
     });
 
-    game.players.forEach(player => {
+    updatedGame.players.forEach(player => {
         if (GENIAL_GLOBAL.users[player.uuid]) {
             const data = { type: GameEvent.PlayerJoined, data: game };
             GENIAL_GLOBAL.users[player.uuid].res?.write(`data: ${JSON.stringify(data)}\n\n`);
         }
     });
 
-    return res.json(game);
+    return res.json(updatedGame);
 });
 
 app.post("/api/game/start", async (req: Request<{}, {}, { gameUuid: Uuid4; adminUuid: Uuid4; }, {}>, res) => {

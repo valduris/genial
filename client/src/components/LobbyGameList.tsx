@@ -3,7 +3,16 @@ import { connect } from "react-redux";
 import * as immer from "immer";
 
 import { translate } from "../utils";
-import { GamesLoadingState, GameStatus, GenialLobby, LobbyGames, PermanentAny, Thunk, Uuid4 } from "../types";
+import {
+    GamesLoadingState,
+    GameStatus,
+    GenialLobby,
+    LobbyGames,
+    PermanentAny,
+    PlayerCount,
+    Thunk,
+    Uuid4
+} from "../types";
 import { log } from "../log";
 
 import { selectPlayerUuid } from "../selectors";
@@ -53,6 +62,7 @@ export function LobbyGameList(props: LobbyGameListProps) {
                                 <button
                                     onClick={() => props.onJoinGame(game.uuid)}
                                     data-role={"game_list_join"}
+                                    disabled={game.playerCount === game.players.length as PlayerCount}
                                 >
                                     {translate("joinGame")}
                                 </button>
