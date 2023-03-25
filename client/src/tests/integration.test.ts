@@ -11,16 +11,6 @@ import {
 } from "../utils";
 import { BoardHexyPairs, BoardSize, GameStatus, GenialInProgress, PlayerCount, UnixTimestamp } from "../types";
 
-// export function createPlayer(args: { name: string; hexyPairs: PlayerHexyPairs }): Player {
-//     return {
-//         hexyPairs: args.hexyPairs,
-//         name: args.name,
-//         hoveredHexyCoords: undefined,
-//         movesInTurn: 1,
-//         firstPlacedHexy: undefined,
-//         progress: createEmptyProgress(),
-//     } as const;
-// }
 
 // beforeAll(() => {
 //     const mGetRandomValues = jest.fn().mockReturnValueOnce(new Uint8Array(10));

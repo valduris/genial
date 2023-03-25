@@ -167,7 +167,7 @@ export async function initialize(): Promise<InitializeResult> {
         // TODO show browser unsupported popup
     }
 
-    const source = new EventSource("http://localhost:3300/events");
+    const source = new EventSource(`http://localhost:3300/events/${getOrCreatePlayerUuidForUnauthenticatedPlayer()}`);
 
     source.addEventListener("message", (e) => {
         store.dispatch(onEventSourceMessage(JSON.parse(e.data)));

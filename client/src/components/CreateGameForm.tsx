@@ -37,7 +37,7 @@ export function CreateGameForm(props: CreateGameFormProps) {
         playerCount: 3,
         public: true,
         showProgress: true,
-        name: undefined,
+        name: "",
     });
 
     const setValueInFormState = React.useCallback((value: Partial<Omit<GamePostParams, "authorId">>) => {
@@ -161,7 +161,13 @@ export function CreateGameForm(props: CreateGameFormProps) {
                 <div className="field-body">
                     <div className="field">
                         <div className="control">
-                            <input className="input" type="text" />
+                            <input
+                                data-role={"create_game_name"}
+                                className="input"
+                                type="text"
+                                value={formState.name}
+                                onChange={(event) => setValueInFormState({ name: event.target.value })}
+                            />
                         </div>
                     </div>
                 </div>
@@ -170,9 +176,9 @@ export function CreateGameForm(props: CreateGameFormProps) {
                 <div className="field-label is-normal" />
                 <div className="field-body">
                     <button
+                        data-role={"create_game_submit"}
                         className="button is-link"
                         onClick={() => props.onSubmit(formState)}
-                        value={formState.name}
                     >
                         {translate("createGame")}
                     </button>

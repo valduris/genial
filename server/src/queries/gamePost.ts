@@ -19,7 +19,12 @@ export function apiPostGame(prisma: PrismaClient, body: GamePostParams) {
             },
         },
         select: {
+            public: true,
+            showProgress: true,
             name: true,
+            boardSize: true,
+            playerCount: true,
+            players: true,
         },
     })
 }

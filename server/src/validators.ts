@@ -6,8 +6,8 @@ export type Method = "GET" | "POST" | "DELETE" | "OPTIONS" | "PATCH" | "PUT";
 
 export type Validators = { [key in Method]: Record<string, Struct>; };
 
-const Email = define("Email", isEmail);
-const Uuid = define("Uuid", isUuid.v4);
+export const Email = define("Email", isEmail);
+export const Uuid = define("Uuid", isUuid.v4);
 
 export function isRequestValid(req: Pick<Request, "url" | "method" | "body">): boolean {
     const validator = VALIDATORS[req.method][req.url];
@@ -42,6 +42,10 @@ export const VALIDATORS: Validators = {
             boardSize: size(number(), 6, 8),
         }),
         "/api/game/join": object({
+            playerUuid: Uuid,
+            gameUuid: Uuid,
+        }),
+        "/api/game/start": object({
             playerUuid: Uuid,
             gameUuid: Uuid,
         }),

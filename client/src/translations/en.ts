@@ -6,7 +6,10 @@ export const translations = {
     showProgress: "Show progress",
     name: "Name",
     joinGame: "Join",
+    players: "Players",
+    startGame: "Start game!",
     loading: "Loading games...",
     noGames: "No games available. Create a new game yourself!",
     gameName: "Game name",
+    waitingForPlayerToJoin: "Waiting for player to join...",
 } as const;

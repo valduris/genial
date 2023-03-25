@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
 export async function apiGames(prisma: PrismaClient) {
-    const result = await prisma.game.findMany({
+    return await prisma.game.findMany({
         where: {
             status: "Created",
         },
@@ -20,6 +20,4 @@ export async function apiGames(prisma: PrismaClient) {
             },
         },
     });
-    console.log(result);
-    return result;
 }

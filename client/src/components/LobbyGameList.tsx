@@ -3,12 +3,11 @@ import { connect } from "react-redux";
 import * as immer from "immer";
 
 import { translate } from "../utils";
-import { GamesLoadingState, GameStatus, GenialLobby, LobbyGames, Thunk, Uuid4 } from "../types";
+import { GamesLoadingState, GameStatus, GenialLobby, LobbyGames, PermanentAny, Thunk, Uuid4 } from "../types";
 import { log } from "../log";
 
-import "./LobbyGameList.css";
 import { selectPlayerUuid } from "../selectors";
-import { setGenialState } from "../index";
+import { onEventSourceMessage, setGenialState } from "../index";
 import { apiPostGame } from "../types/server";
 
 export interface LobbyGameListStateProps {
@@ -24,35 +23,45 @@ export type LobbyGameListProps = LobbyGameListStateProps & LobbyGameListDispatch
 
 export function LobbyGameList(props: LobbyGameListProps) {
     return (
-        <div className={"game-list"}>
-            <div className={"row"}>
-                <div className={"boardSize"}>{translate("boardSize")}</div>
-                <div className={"playerCount"}>{translate("playerCount")}</div>
-                <div className={"name"}>{translate("gameName")}</div>
-            </div>
-            {props.loadingState === "loading" && (
-                <div className={"row"}>
-                    <div className={"loading"}>{translate("loading")}</div>
-                </div>
-            )}
-            {props.loadingState === "noGames" && (
-                <div className={"row"}>
-                    <div className={"noGames"}>{translate("noGames")}</div>
-                </div>
-            )}
-            {props.loadingState === "loaded" && props.games.map(game => {
-                return (
-                    <div className={"row"} key={game.uuid}>
-                        <div className={"boardSize"}>{game.boardSize}</div>
-                        <div className={"playerCount"}>{`${game.players.length} / ${game.playerCount}`}</div>
-                        <div className={"name"}>{game.name}</div>
-                        <div className={"join"}>
-                            <button onClick={() => props.onJoinGame(game.uuid)}>{translate("joinGame")}</button>
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
+        <table className={"table"}>
+            <thead>
+                <tr>
+                    <th>{translate("boardSize")}</th>
+                    <th>{translate("playerCount")}</th>
+                    <th>{translate("gameName")}</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {props.loadingState === "loading" && (
+                    <tr>
+                        <td className={"loading"}>{translate("loading")}</td>
+                    </tr>
+                )}
+                {props.loadingState === "noGames" && (
+                    <tr>
+                        <td className={"noGames"}>{translate("noGames")}</td>
+                    </tr>
+                )}
+                {props.loadingState === "loaded" && props.games.map(game => {
+                    return (
+                        <tr key={game.uuid}>
+                            <td>{game.boardSize}</td>
+                            <td>{`${game.players.length} / ${game.playerCount}`}</td>
+                            <td>{game.name}</td>
+                            <td>
+                                <button
+                                    onClick={() => props.onJoinGame(game.uuid)}
+                                    data-role={"game_list_join"}
+                                >
+                                    {translate("joinGame")}
+                                </button>
+                            </td>
+                        </tr>
+                    );
+                })}
+            </tbody>
+        </table>
     );
 }
 
