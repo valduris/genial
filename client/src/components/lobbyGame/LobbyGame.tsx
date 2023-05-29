@@ -1,10 +1,12 @@
 import * as React from "react";
+import * as immer from "immer";
 import { connect } from "react-redux";
 
 import { mapTimes, translate } from "../../utils";
 import { GameStatus, GenialLobby, LobbyGames, Thunk, Uuid4 } from "../../types";
 import { setGenialState } from "../../index";
-import { selectPlayerUuid } from "../../selectors";
+import { selectGameId, selectPlayerUuid } from "../../selectors";
+import { fetchJson } from "../../api";
 
 export interface LobbyGameStateProps {
     games: LobbyGames;
@@ -76,6 +78,12 @@ export function LobbyGame(props: LobbyGameProps) {
                     props.game.adminUuid !== props.playerUuid
                 )}
             />
+            <input
+                className={"button"}
+                type={"submit"}
+                onSubmit={() => props.onLeaveGame(props.game.uuid)}
+                value={translate("leaveGame")}
+            />
         </div>
     );
 }
@@ -86,7 +94,26 @@ export const LobbyGameConnected = connect<any, any, any, any>((state: GenialLobb
     loadingState: state.loadingState,
     playerUuid: selectPlayerUuid(state),
     adminUuid: selectPlayerUuid(state),
-}), { onStartGame: onStartGame })(LobbyGame);
+}), { onStartGame: onStartGame, onLeaveGame: onLeaveGame })(LobbyGame);
+
+export function onLeaveGame(gameUuid: Uuid4): Thunk<GenialLobby> {
+    return async (dispatch, getState) => {
+        const state = getState();
+        const result = await fetchJson("http://localhost:3300/api/game/leave", {
+            body: JSON.stringify({
+                playerUuid: selectPlayerUuid(state),
+                gameId: state.game.uuid,
+            }),
+        });
+        dispatch(setGenialState(immer.produce(state, state => {
+            state.game = {
+                ...result,
+                finished: false,
+                status: GameStatus.Lobby,
+            };
+        })));
+    };
+}
 
 export function onStartGame(gameUuid: Uuid4): Thunk {
     return async (dispatch, getState) => {

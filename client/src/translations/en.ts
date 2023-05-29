@@ -11,5 +11,6 @@ export const translations = {
     loading: "Loading games...",
     noGames: "No games available. Create a new game yourself!",
     gameName: "Game name",
+    leaveGame: "Leave game",
     waitingForPlayerToJoin: "Waiting for player to join...",
 } as const;

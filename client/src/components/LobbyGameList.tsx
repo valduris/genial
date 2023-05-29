@@ -17,7 +17,6 @@ import { log } from "../log";
 
 import { selectPlayerUuid } from "../selectors";
 import { onEventSourceMessage, setGenialState } from "../index";
-import { apiPostGame } from "../types/server";
 
 export interface LobbyGameListStateProps {
     games: LobbyGames;
@@ -82,7 +81,7 @@ export const LobbyGameListConnected = connect<any, any, any, any>((state: Genial
 
 export function onJoinGame(gameUuid: Uuid4): Thunk<GenialLobby> {
     return async (dispatch, getState, { fetchJson }) => {
-        type JoinGameResult = ReturnType<Awaited<typeof apiPostGame>>;
+        type JoinGameResult = ReturnType<Awaited<typeof httpPostCreateGame>>;
 
         log.info("getState() before onJoinGame", getState());
 

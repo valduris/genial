@@ -23,6 +23,7 @@ import { Api, fetchJson } from "./api";
 import "./Genial.css";
 import { uuid4 } from "./utils";
 import { ApiGames } from "./types/server";
+import { selectPlayerUuid } from "./selectors";
 
 export function setGenialStatePlain(state: Genial) {
     return {
@@ -186,6 +187,13 @@ export async function initialize(): Promise<InitializeResult> {
 
 export function onEventSourceMessage(data: object): Thunk {
     return (dispatch, getState) => {
+        if ("ping" in data) {
+            fetchJson("http://localhost:3300/api/pong", {
+                body: JSON.stringify({ playerUuid: selectPlayerUuid(getState()) }),
+            });
+        } else if ("playerJoined" in data) {
+            dispatch(setGenialState(data));
+        }
         console.log("onEventSourceMessage", data);
     };
 }

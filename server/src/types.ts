@@ -6,7 +6,18 @@ export interface BoardHexy {
     color: Color;
 }
 
+export enum ServerSentEvent {
+    GameStarted = "started",
+    GameFinished = "finished",
+    PlayerJoined = "playerJoined",
+    PlayerLeft = "playerLeft",
+    HexyPlaced = "hexyPlaced",
+    Ping = "ping",
+}
+
 export type Color = "red" | "yellow" | "orange" | "blue" | "green" | "violet";
+
+export type TemporaryAny = any;
 
 export type BoardSize = 6 | 7 | 8;
 
@@ -17,6 +28,53 @@ export type GameType = "singlePlayer" | "multiPlayer" | "replay";
 export type BoardHexyPair = [BoardHexy, BoardHexy];
 
 export type BoardHexyPairs = BoardHexyPair[];
+
+export interface Hexy {
+    color: Color;
+}
+
+export type HexyPair = [Hexy, Hexy];
+
+export type HexyPairs = HexyPair[];
+
+export type PlayerHexyPairs = [
+    HexyPair | undefined,
+    HexyPair | undefined,
+    HexyPair | undefined,
+    HexyPair | undefined,
+    HexyPair | undefined,
+    HexyPair | undefined,
+];
+
+export interface Player {
+    name: string;
+    hexyPairs: PlayerHexyPairs;
+    movesInTurn: number;
+    progress: Progress;
+}
+
+export interface Game {
+    players: Player[];
+    boardHexyPairs: BoardHexyPairs;
+}
+
+export type Direction = [-1, 0] | [0, -1] | [1, 0] | [-1, 1] | [0, 1] | [1, -1];
+
+export type PlayerCount = 2 | 3 | 4;
+
+export interface Game {
+    authorId: number;
+    boardSize: BoardSize;
+    createdAt: string; // "2023-01-18T09:42:39.417Z";
+    finished: false;
+    players: Player[];
+    name: string;
+    playerCount: PlayerCount;
+    public: boolean;
+    showProgress: boolean;
+    status: "Created";
+    uuid: "eb6a6aa6-4cbe-459f-bee7-c78478a95c36"
+}
 
 export type SpecialCorners = [BoardHexy, BoardHexy, BoardHexy, BoardHexy, BoardHexy, BoardHexy];
 
