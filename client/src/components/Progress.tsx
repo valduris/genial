@@ -1,6 +1,6 @@
 import * as React from "react";
 import { connect } from "react-redux";
-import * as classNames from "classnames";
+import classNames from "classnames";
 import { DeepPick, Game, GenialInProgress } from "../types";
 import { mapTimes } from "../utils";
 import { onPlayerHexyPairClick } from "../GenialUi";

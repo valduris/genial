@@ -100,7 +100,7 @@ export function selectHexyStyleByPoint(state: SelectHexyStyleByPointState, point
 //            => cancel
 export type SelectIsPointAllowedToReceiveHoverState = FirstParam<[typeof selectFirstPlacedHexy]> & FirstParam<typeof selectPlayerSelectedHexyPair>
     & FirstParam<typeof selectIsPointCoveredWithHexy> & FirstParam<typeof selectPlayerSelectedHexyPairHexyColor>
-    & Pick<GenialInProgress, "hexyPairs" | "boardSize">;
+    & DeepPick<GenialInProgress, "game", "hexyPairs" | "boardSize">;
 
 export function selectIsPointAllowedToReceiveHover(state: SelectIsPointAllowedToReceiveHoverState, point: Point): boolean {
     const firstPlacedHexy = selectFirstPlacedHexy(state);
@@ -122,7 +122,7 @@ export function selectIsPointAllowedToReceiveHover(state: SelectIsPointAllowedTo
             );
     }
 
-    const neighboringPoints = getNeighboringHexysOf(point, state).filter(hexyOrPoint => !selectIsPointCoveredWithHexy(state, hexyOrPoint));
+    const neighboringPoints = getNeighboringHexysOf(point, state.game).filter(hexyOrPoint => !selectIsPointCoveredWithHexy(state, hexyOrPoint));
 
     if (neighboringPoints.length === 1 && isPointSpecialCorner(neighboringPoints[0])) {
         const isZerothSelected = playerSelectedHexyPair[0].selected;
@@ -135,14 +135,14 @@ export function selectIsPointAllowedToReceiveHover(state: SelectIsPointAllowedTo
     return true;
 }
 
-export function selectIsPointCoveredWithHexy(state: Pick<GenialInProgress, "hexyPairs">, point: Point): boolean {
-    return state.hexyPairs.some(hexyPair => {
+export function selectIsPointCoveredWithHexy(state: DeepPick<GenialInProgress, "game", "hexyPairs">, point: Point): boolean {
+    return state.game.hexyPairs.some(hexyPair => {
         return hexyPair.some(hexy => hexy.x === point.x && hexy.y === point.y);
     });
 }
 
-export function selectGameId(state: Pick<GenialInProgress, "gameId">): string {
-    return state.gameId;
+export function selectGameId(state: DeepPick<GenialInProgress, "game", "uuid">): string {
+    return state.game.uuid;
 }
 
 export function selectPlayerUuid(state: Pick<GenialCommon, "playerUuid">): Uuid4 {

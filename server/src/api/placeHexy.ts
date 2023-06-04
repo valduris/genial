@@ -1,3 +1,4 @@
+import { Request } from "express";
 import { Uuid4 } from "../types";
 
 export interface PlaceHexyParams {

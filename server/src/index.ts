@@ -1,6 +1,6 @@
-import express, { Request } from "express";
-import cors from "cors";
-import bodyParser from "body-parser";
+import * as express from "express";
+import * as cors from "cors";
+import * as bodyParser from "body-parser";
 import { PrismaClient } from "@prisma/client";
 
 import { createGame, listGames, joinGame, leaveGame, startGame, pingPong, subscribePlayer, placeHexy } from "./api/index.js";

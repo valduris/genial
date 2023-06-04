@@ -24,7 +24,7 @@ export async function prismaLeaveGame(prisma: PrismaClient, params: LeaveGamePar
         },
         select: {
             players: {
-                uuid: true,
+                // uuid: true,
             },
         },
     })
@@ -38,27 +38,27 @@ export async function leaveGame(req: Request<{}, {}, LeaveGameParams, {}>, res: 
         return;
     }
 
-    const game = await prisma.game.findUnique({
-        where: { uuid: req.body.gameUuid },
-        select: {
-            uuid: true,
-            playerCount: true,
-            players: {
-                select: {
-                    uuid: true,
-                },
-            },
-        },
-    });
+    // const game = await prisma.game.findUnique({
+    //     where: { uuid: req.body.gameUuid },
+    //     select: {
+    //         uuid: true,
+    //         playerCount: true,
+    //         players: {
+    //             select: {
+    //                 uuid: true,
+    //             },
+    //         },
+    //     },
+    // });
+    //
+    // const updatedGame = await prismaLeaveGame(prisma, req.body);
+    //
+    // updatedGame.players.forEach(player => {
+    //     if (GENIAL_GLOBAL.users[player.uuid]) {
+    //         const data = { type: ServerSentEvent.PlayerLeft, data: game };
+    //         GENIAL_GLOBAL.users[player.uuid].res?.write(`data: ${JSON.stringify(data)}\n\n`);
+    //     }
+    // });
 
-    const updatedGame = await prismaLeaveGame(prisma, req.body);
-
-    updatedGame.players.forEach(player => {
-        if (GENIAL_GLOBAL.users[player.uuid]) {
-            const data = { type: ServerSentEvent.PlayerLeft, data: game };
-            GENIAL_GLOBAL.users[player.uuid].res?.write(`data: ${JSON.stringify(data)}\n\n`);
-        }
-    });
-
-    return res.json(updatedGame);
+    // return res.json(updatedGame);
 }

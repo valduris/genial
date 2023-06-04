@@ -3,17 +3,7 @@ import * as ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
 import { applyMiddleware, createStore, DeepPartial } from "redux";
 import thunk from "redux-thunk";
-import {
-    Dispatch,
-    EventSourceState,
-    GameStatus,
-    Genial,
-    GenialLobby,
-    LocalStorageKey,
-    PermanentAny,
-    Thunk,
-    ThunkExtraArguments, Uuid4
-} from "./types"
+import { Dispatch, EventSourceState, GameStatus, Genial, GenialLobby, LocalStorageKey, PermanentAny, Thunk, ThunkExtraArguments, Uuid4 } from "./types"
 
 import { GenialUiConnected } from "./GenialUi";
 import { GENIAL_GLOBAL } from "./global";
@@ -22,7 +12,6 @@ import { Api, fetchJson } from "./api";
 
 import "./Genial.css";
 import { uuid4 } from "./utils";
-import { ApiGames } from "./types/server";
 import { selectPlayerUuid } from "./selectors";
 
 export function setGenialStatePlain(state: Genial) {
@@ -141,9 +130,9 @@ export async function initialize(): Promise<InitializeResult> {
 
     GENIAL_GLOBAL.store = store;
 
-    const games: ApiGames = [{}];
+    const games = [{}];
 
-    fetchJson("http://localhost:3300/api/games", { method: "GET" }).then((games: ApiGames) => {
+    fetchJson("http://localhost:3300/api/games", { method: "GET" }).then((games) => {
         store.dispatch(setGenialState({ games: games, loadingState: games.length > 0 ? "loaded" : "noGames" }));
     });
 
@@ -192,7 +181,7 @@ export function onEventSourceMessage(data: object): Thunk {
                 body: JSON.stringify({ playerUuid: selectPlayerUuid(getState()) }),
             });
         } else if ("playerJoined" in data) {
-            dispatch(setGenialState(data));
+            // dispatch(setGenialState(data));
         }
         console.log("onEventSourceMessage", data);
     };

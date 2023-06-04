@@ -1,17 +1,18 @@
 {
   "compilerOptions": {
+    "esModuleInterop": true,
     "module": "commonjs",
     "target": "es6",
     "allowJs": false,
-    "checkJs": true,
+    "checkJs": false,
     "jsx": "react",
     "outDir": "./build",
-    "rootDir": "./src",
     "removeComments": true,
     "noEmit": true,
     "pretty": false,
+    "rootDir": "./src",
     "skipLibCheck": true,
     "strict": true
   },
-  "include": ["../server/node_modules/.prisma/client", "../server/src/queries"]
+  "types" : ["node", "lodash", "express", "./src/serverTypes.d.ts"]
 }

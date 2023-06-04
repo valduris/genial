@@ -3,14 +3,14 @@ import * as immer from "immer";
 import { connect } from "react-redux";
 
 import { mapTimes, translate } from "../../utils";
-import { GameStatus, GenialLobby, LobbyGames, Thunk, Uuid4 } from "../../types";
+import { Game, GameStatus, GenialLobby, LobbyGames, Thunk, Uuid4 } from "../../types";
 import { setGenialState } from "../../index";
-import { selectGameId, selectPlayerUuid } from "../../selectors";
+import { selectPlayerUuid } from "../../selectors";
 import { fetchJson } from "../../api";
 
 export interface LobbyGameStateProps {
     games: LobbyGames;
-    game: Pick<GenialLobby, "game">;
+    game: Game;
     playerUuid: string;
     adminUuid: string;
 }
@@ -18,6 +18,7 @@ export interface LobbyGameStateProps {
 export interface LobbyGameDispatchProps {
     onReadyChange: (gameUuid: Uuid4) => void;
     onStartGame: (gameUuid: Uuid4) => void;
+    onLeaveGame: (gameUuid: Uuid4) => void;
 }
 
 export type LobbyGameProps = LobbyGameStateProps & LobbyGameDispatchProps;
@@ -102,7 +103,7 @@ export function onLeaveGame(gameUuid: Uuid4): Thunk<GenialLobby> {
         const result = await fetchJson("http://localhost:3300/api/game/leave", {
             body: JSON.stringify({
                 playerUuid: selectPlayerUuid(state),
-                gameId: state.game.uuid,
+                gameId: state.game?.uuid,
             }),
         });
         dispatch(setGenialState(immer.produce(state, state => {
@@ -117,25 +118,25 @@ export function onLeaveGame(gameUuid: Uuid4): Thunk<GenialLobby> {
 
 export function onStartGame(gameUuid: Uuid4): Thunk {
     return async (dispatch, getState) => {
-        // const playerUuid = selectPlayerUuid(getState());
-        // const body: GamePostParams = { ...data, adminUuid: playerUuid };
-        // const result = await fetchJson("http://localhost:3300/api/game", { body: JSON.stringify(body) });
-        // console.log(result);
-        // dispatch(setGenialState(immer.produce(getState(), state => {
-        //     state.game = {
-        //         ...result,
-        //         finished: false,
-        //         status: GameStatus.Lobby,
-        //     };
-        // })));
-        // console.log("onCreateGameFormSubmit", getState());
-        //
-        //
-        // // const result = await Api.joinGame({
-        // //     gameUuid: gameUuid,
-        // //     playerUuid: selectPlayerUuid(getState()),
-        // // });
-        // dispatch(setGenialState({}));
-        // // log.info(result);
+        const playerUuid = selectPlayerUuid(getState());
+        const body = { adminUuid: playerUuid };
+        const result = await fetchJson("http://localhost:3300/api/game", { body: JSON.stringify(body) });
+        console.log(result);
+        dispatch(setGenialState(immer.produce(getState(), state => {
+            state.game = {
+                ...result,
+                finished: false,
+                status: GameStatus.Lobby,
+            };
+        })));
+        console.log("onCreateGameFormSubmit", getState());
+
+
+        // const result = await Api.joinGame({
+        //     gameUuid: gameUuid,
+        //     playerUuid: selectPlayerUuid(getState()),
+        // });
+        dispatch(setGenialState({}));
+        // log.info(result);
     };
 }

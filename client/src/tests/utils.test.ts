@@ -18,7 +18,7 @@ describe("utils", () => {
             expect(getColorByPoint(boardHexyPairs, { x: 1, y: 2 })).toBe("orange");
         });
 
-        it("returns color of hexy on board by coordinates if present", () => {
+        it("returns color of hexy on board by coordinates if present #2", () => {
             const boardHexyPairs: BoardHexyPairs = [
                 createBoardHexyPair(createBoardHexy(7, 6, "blue"), createBoardHexy(7, 4, "green")),
             ];
@@ -44,7 +44,7 @@ describe("utils", () => {
     describe("calulateProgressGained", () => {
         it("returns progress gained when a hexy pair is placed on board when it's placed along special corner", () => {
             const progress = calulateProgressGained(
-                { hexyPairs: [] },
+                { game: { hexyPairs: [] } },
                 createBoardHexyPair(createBoardHexy(-1, -5, "orange"), createBoardHexy(0, -5, "blue"))
             );
             expect(progress).toEqual({ ...createEmptyProgress(), blue: 1 });
@@ -53,7 +53,7 @@ describe("utils", () => {
         it("returns progress gained when a hexy pair is placed along a different hexy pair on board which neighbors with special corner", () => {
             const boardHexyPairs = [createBoardHexyPair(createBoardHexy(-1, -5, "orange"), createBoardHexy(0, -5, "blue"))];
             const progress = calulateProgressGained(
-                { hexyPairs: boardHexyPairs },
+                { game: { hexyPairs: boardHexyPairs } },
                 createBoardHexyPair(createBoardHexy(-1, -4, "orange"), createBoardHexy(0, -4, "blue"))
             );
             expect(progress).toEqual({ ...createEmptyProgress(), blue: 2, orange: 1 });
@@ -65,7 +65,7 @@ describe("utils", () => {
                 createBoardHexyPair(createBoardHexy(-2, -4, "orange"), createBoardHexy(-2, -3, "orange")),
             ];
             const progress = calulateProgressGained(
-                { hexyPairs: boardHexyPairs },
+                { game: { hexyPairs: boardHexyPairs } },
                 createBoardHexyPair(createBoardHexy(-1, -4, "orange"), createBoardHexy(0, -4, "blue"))
             );
             expect(progress).toEqual({ ...createEmptyProgress(), blue: 2, orange: 3 });
@@ -78,7 +78,7 @@ describe("utils", () => {
                 createBoardHexyPair(createBoardHexy(0, 1, "yellow"), createBoardHexy(0, 2, "yellow")),
             ];
             const progress = calulateProgressGained(
-                { hexyPairs: boardHexyPairs },
+                { game: { hexyPairs: boardHexyPairs } },
                 createBoardHexyPair(createBoardHexy(-1, 6, "yellow"), createBoardHexy(0, 5, "yellow"))
             );
             expect(progress).toEqual({ ...createEmptyProgress(), yellow: 7 });

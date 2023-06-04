@@ -1,4 +1,4 @@
-import * as classNames from "classnames";
+import classNames from "classnames";
 import * as immer from "immer"
 import * as React from "react";
 import { connect } from "react-redux";
@@ -18,7 +18,16 @@ import {
     selectPlayerSelectedHexyPairHexyColor
 } from "../selectors";
 import { HexyComponent } from "./Hexy";
-import { Game, GenialInProgress, Genial, PlayerHexyPair, Point, ProgressValue, Thunk } from "../types";
+import {
+    GenialInProgress,
+    PlayerHexyPair,
+    Point,
+    ProgressValue,
+    Thunk,
+    BoardHexyPair,
+    DeepPick,
+    BoardSize
+} from "../types";
 import { setGenialState } from "../index";
 import { COLORS } from "../consts";
 
@@ -27,7 +36,8 @@ export interface BoardOwnProps {
 }
 
 export interface BoardStateProps {
-    game: Pick<GenialInProgress, "player" | "boardSize" | "hexyPairs">;
+    game: GenialInProgress["game"];
+    player: GenialInProgress["player"];
 }
 
 export interface BoardDispatchProps {
@@ -46,7 +56,7 @@ const VIEW_BOX_MAP = {
 export function Board(props: BoardProps) {
     return (
         <div className={"svg-container"}>
-            <svg viewBox={VIEW_BOX_MAP[props.game.boardSize]} xmlns="http://www.w3.org/2000/svg">
+            <svg viewBox={VIEW_BOX_MAP[props.game.boardSize as BoardSize]} xmlns="http://www.w3.org/2000/svg">
                 <g className={"atlas"}>
                     {(() => {
                         const result = [];
@@ -59,7 +69,7 @@ export function Board(props: BoardProps) {
 
                             for (let col = xMin; col <= xMax; col++) {
                                 const { x, y } = getXyCoordsByRowCol({ row: row, col: col, boardSize: props.game.boardSize });
-                                const hexyStyle = selectHexyStyleByPoint(props.game, { x: col, y: row });
+                                const hexyStyle = selectHexyStyleByPoint(props, { x: col, y: row });
 
                                 result.push(
                                     <g
@@ -94,7 +104,7 @@ export function Board(props: BoardProps) {
                     })()}
                 </g>
                 <g className="board">
-                    {props.game.hexyPairs.map((hexyPair, index) => {
+                    {props.game.hexyPairs.map((hexyPair: BoardHexyPair, index) => {
                         return (
                             <g key={index}>
                                 {hexyPair.map(hexy => {
@@ -118,7 +128,7 @@ export function Board(props: BoardProps) {
 }
 
 export const BoardConnected = connect<any, any, any, any>(
-    (state) => ({ game: state }),
+    (state: GenialInProgress) => ({ game: state.game, player: state.player }),
     {
         onBoardHexyMouseEnter: onBoardHexyMouseEnter,
         onPreviewedBoardHexyClick: onPreviewedBoardHexyClick,
@@ -172,14 +182,14 @@ export function onPreviewedBoardHexyClick(point: Point, preview: boolean): Thunk
                 const movesRemaining = state.player.movesInTurn + movesGained - 1;
 
                 state.player.movesInTurn = movesRemaining;
-                state.hexyPairs.push(boardHexyPair);
+                state.game.hexyPairs.push(boardHexyPair);
                 state.player.hexyPairs.splice(state.player.hexyPairs.indexOf(playerSelectedHexyPair), 1, undefined);
                 state.player.firstPlacedHexy = undefined;
 
                 if (movesRemaining === 0) {
                     while (state.player.hexyPairs.some(h => h === undefined)) {
-                        const randomIndex = Math.floor(Math.random() * state.drawableHexyPairs.length);
-                        const [drawnHexyPair] = state.drawableHexyPairs.splice(randomIndex, 1);
+                        const randomIndex = Math.floor(Math.random() * state.game.drawableHexyPairs.length);
+                        const [drawnHexyPair] = state.game.drawableHexyPairs.splice(randomIndex, 1);
                         // console.log(JSON.stringify(state.player.hexyPairs, null, 2))
                         const emptyIndex = state.player.hexyPairs.findIndex(h => h === undefined);
                         state.player.hexyPairs.splice(emptyIndex, 1, drawnHexyPair.map(h => ({

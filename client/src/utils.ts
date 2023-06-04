@@ -1,7 +1,24 @@
 import { COLORS, DIRECTIONS, PROGRESS_COLORS, SPECIAL_CORNERS } from "./consts";
 import {
-    BoardHexy, BoardHexyPair, BoardHexyPairs, BoardSize, Point, Progress, Sound, Uuid4,
-    Color, Direction, DrawableHexyPair, DrawableHexyPairs, Game, GameStatus, HexColor, MenuOption, PermanentAny, PlayerHexyPair,
+    BoardHexy,
+    BoardHexyPair,
+    BoardHexyPairs,
+    BoardSize,
+    Point,
+    Progress,
+    Sound,
+    Uuid4,
+    Color,
+    Direction,
+    DrawableHexyPair,
+    DrawableHexyPairs,
+    Game,
+    GameStatus,
+    HexColor,
+    MenuOption,
+    PermanentAny,
+    PlayerHexyPair,
+    DeepPick, GenialInProgress,
 } from "./types";
 import { translations } from "./translations/en";
 
@@ -146,16 +163,16 @@ export function createDrawableHexyPairs(): DrawableHexyPairs {
     }, []);
 }
 
-export function calulateProgressGained(game: Pick<Game, "hexyPairs">, hexyPair: BoardHexyPair): Progress {
+export function calulateProgressGained(state: DeepPick<GenialInProgress, "game", "hexyPairs">, hexyPair: BoardHexyPair): Progress {
     const progressGained: Progress = hexyPair.reduce((outerMemo: Progress, hexy) => {
         return DIRECTIONS.reduce((progress, direction) => {
             for (
                 let tempPoint: Point = getNextPointInDirection(hexy, direction),
-                    color = getColorByPoint(game.hexyPairs, tempPoint);
+                    color = getColorByPoint(state.game.hexyPairs, tempPoint);
                 color === hexy.color;
                 progress[color] += 1,
                 tempPoint = getNextPointInDirection(tempPoint, direction),
-                color = getColorByPoint(game.hexyPairs, tempPoint)
+                color = getColorByPoint(state.game.hexyPairs, tempPoint)
             );
             return progress;
         }, outerMemo);

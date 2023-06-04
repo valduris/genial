@@ -6,6 +6,8 @@ npx prisma studio
 
 npx prisma migrate dev
 
+./node_modules/.bin/tsc ./src/api/typesForClient.ts --declaration --emitDeclarationOnly --outfile ./dist/outFile.d.ts
+
 # PSQL
 psql -c 'create schema blablatest2'
 psql -c 'select * from test;'

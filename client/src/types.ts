@@ -104,6 +104,7 @@ export type LobbyGames = LobbyGame[];
 export type GamesLoadingState = "noGames" | "loading" | "loaded";
 
 export interface Game {
+    adminUuid: Uuid4;
     authorId: number;
     boardSize: BoardSize;
     createdAt: "2023-01-18T09:42:39.417Z";
@@ -111,7 +112,14 @@ export interface Game {
     players: Array<{
         id: number;
         name: string;
+        progress?: Progress;
     }>;
+    drawableHexyPairs: DrawableHexyPairs;
+    hexyPairs: BoardHexyPairs;
+    player: {
+        hexyPairs: PlayerHexyPairs,
+        progress: Progress;
+    },
     name: string;
     playerCount: PlayerCount;
     public: boolean;

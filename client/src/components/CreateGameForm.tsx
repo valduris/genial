@@ -1,11 +1,10 @@
 import { connect } from "react-redux";
 import * as immer from "immer";
-import * as classNames from "classnames";
+import classNames from "classnames";
 import * as React from "react";
 
 import { translate } from "../utils";
-import { GameStatus, GenialLobby, Thunk } from "../types";
-import { GamePostParams } from "../types/server";
+import { BoardSize, Game, GameStatus, GenialLobby, PlayerCount, Thunk } from "../types";
 
 import { setGenialState } from "../index";
 import { selectPlayerUuid } from "../selectors";
@@ -14,7 +13,7 @@ export interface CreateGameFormOwnProps {
     visible: boolean;
 }
 
-export type CreateGameFormFormState = Pick<GamePostParams, "boardSize" | "playerCount" | "public" | "showProgress" | "name">;
+export type CreateGameFormFormState = Pick<Game, "boardSize" | "playerCount" | "public" | "showProgress" | "name">;
 
 export interface CreateGameFormDispatchProps {
     onSubmit: (data: CreateGameFormFormState) => void;
@@ -40,7 +39,7 @@ export function CreateGameForm(props: CreateGameFormProps) {
         name: "",
     });
 
-    const setValueInFormState = React.useCallback((value: Partial<Omit<GamePostParams, "authorId">>) => {
+    const setValueInFormState = React.useCallback((value: Partial<CreateGameFormFormState>) => {
         setFormState(prevState => ({ ...prevState, ...value }));
     }, [setFormState]);
 
@@ -68,7 +67,7 @@ export function CreateGameForm(props: CreateGameFormProps) {
                                         "is-info": formState.playerCount === n,
                                         "is-selected": formState.playerCount === n,
                                     })}
-                                    onClick={() => setValueInFormState({ playerCount: n })
+                                    onClick={() => setValueInFormState({ playerCount: n as PlayerCount })
                                 }>
                                     {n}
                                 </button>
@@ -99,7 +98,7 @@ export function CreateGameForm(props: CreateGameFormProps) {
                                         "is-info": formState.boardSize === n,
                                         "is-selected": formState.boardSize === n,
                                     })}
-                                    onClick={() => setValueInFormState({ boardSize: n })}
+                                    onClick={() => setValueInFormState({ boardSize: n as BoardSize })}
                                 >
                                     {n}
                                 </button>
@@ -193,7 +192,7 @@ export const CreateGameFormConnected = connect<any, any, any, any>(undefined, { 
 export function onCreateGameFormSubmit(data: CreateGameFormFormState): Thunk<GenialLobby> {
     return async (dispatch, getState, { fetchJson }) => {
         const playerUuid = selectPlayerUuid(getState());
-        const body: GamePostParams = { ...data, adminUuid: playerUuid };
+        const body: any = { ...data, adminUuid: playerUuid };
         const result = await fetchJson("http://localhost:3300/api/game", { body: JSON.stringify(body) });
         console.log(result);
         dispatch(setGenialState(immer.produce(getState(), state => {

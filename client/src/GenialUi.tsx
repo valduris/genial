@@ -9,6 +9,15 @@ import { BoardConnected } from "./components/Board";
 import { CreateGameFormConnected } from "./components/CreateGameForm";
 import { LobbyGameConnected } from "./components/lobbyGame/LobbyGame";
 import { Navigation } from "./components/navigation/Navigation";
+// import { type prismaCreateGame } from "./serverTypes";
+import { type ServerSentEvent } from "types";
+// import { type ServerSentEvent } from "validators";
+
+// type Ret = ReturnType<typeof prismaCreateGame>;
+
+const x: ServerSentEvent = "sfd";
+    // x: "234",
+// }
 
 export interface GenialUiStateProps {
     status: GameStatus;

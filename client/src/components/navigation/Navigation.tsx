@@ -1,3 +1,5 @@
+import * as React from "react";
+
 export function Navigation() {
     return (
         <nav className="navbar is-transparent" role="navigation" aria-label="main navigation">
