@@ -3,33 +3,19 @@ import * as immer from "immer"
 import * as React from "react";
 import { connect } from "react-redux";
 
-import {
-    calulateProgressGained,
-    clamp,
-    createBoardHexyPair,
-    createHexy,
-    getColsByRow,
-    getXyCoordsByRowCol
-} from "../utils";
+import { calulateProgressGained, clamp, createBoardHexyPair, createHexy, getColsByRow, getXyCoordsByRowCol } from "../utils";
 import {
     selectGameId,
-    selectHexyStyleByPoint, selectIsPointAllowedToReceiveHover,
+    selectHexyStyleByPoint,
+    selectIsPointAllowedToReceiveHover,
     selectPlayerSelectedHexyPair,
-    selectPlayerSelectedHexyPairHexyColor
+    selectPlayerSelectedHexyPairHexyColor,
 } from "../selectors";
 import { HexyComponent } from "./Hexy";
-import {
-    GenialInProgress,
-    PlayerHexyPair,
-    Point,
-    ProgressValue,
-    Thunk,
-    BoardHexyPair,
-    DeepPick,
-    BoardSize
-} from "../types";
+import { GenialInProgress, PlayerHexyPair, Point, ProgressValue, Thunk, BoardHexyPair, BoardSize } from "../types";
 import { setGenialState } from "../index";
 import { COLORS } from "../consts";
+import { fetchJson } from "../api";
 
 export interface BoardOwnProps {
     children: React.ReactNode;
@@ -159,7 +145,7 @@ export function onPreviewedBoardHexyClick(point: Point, preview: boolean): Thunk
             const playerSelectedHexyPair = selectPlayerSelectedHexyPair(state);
 
             if (!playerSelectedHexyPair) {
-                return
+                return;
             }
 
             if (!state.player.firstPlacedHexy) {
@@ -167,7 +153,10 @@ export function onPreviewedBoardHexyClick(point: Point, preview: boolean): Thunk
                 const isZerothHexySelected = playerSelectedHexyPair[0].selected;
                 playerSelectedHexyPair[isZerothHexySelected ? 0 : 1].selected = false;
                 playerSelectedHexyPair[isZerothHexySelected ? 1 : 0].selected = true;
-            } else if (state.player.firstPlacedHexy !== undefined) {
+                return;
+            }
+
+            if (state.player.firstPlacedHexy !== undefined) {
                 const boardHexyPair = createBoardHexyPair(
                     state.player.firstPlacedHexy,
                     createHexy(point.x, point.y, selectPlayerSelectedHexyPairHexyColor(state)!)
@@ -202,10 +191,14 @@ export function onPreviewedBoardHexyClick(point: Point, preview: boolean): Thunk
 
                 state.player.movesInTurn = 1;
 
-                Api.placeHexyPairOnBoard({
-                    playerId: 1,
-                    gameId: selectGameId(state),
-                    hexy: boardHexyPair,
+                fetchJson("http://localhost:3300/api/game/placeHexy", JSON.stringify({
+                    body: {
+                        playerId: 1,
+                        gameId: selectGameId(state),
+                        hexy: boardHexyPair,
+                    }
+                })).then(placeHexyResult => {
+                    console.log("place hexy result", placeHexyResult);
                 });
             }
         })));

@@ -1,5 +1,3 @@
-import { BoardHexyPair } from "./types";
-
 export async function fetchJson(url: string, options?: Parameters<typeof fetch>[1]) {
     return await (await fetch(url, {
         method: options?.method ?? "POST",
@@ -10,19 +8,4 @@ export async function fetchJson(url: string, options?: Parameters<typeof fetch>[
         },
         ...options,
     })).json();
-}
-
-export const Api = {
-    placeHexyPairOnBoard: placeHexyPairOnBoard,
-} as const;
-
-async function placeHexyPairOnBoard(params: {
-    playerId: number,
-    gameId: string,
-    hexy: BoardHexyPair,
-}) {
-    const fetchResult = await fetch("http://localhost:3300/api/game/placeHexy");
-    const result = await fetchResult.json();
-
-    return result;
 }

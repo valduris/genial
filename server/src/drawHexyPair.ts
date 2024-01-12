@@ -5,6 +5,8 @@ import { Uuid4 } from "./types";
 
 export const GAME_HEXY_PAIR_MAP: Record<Uuid4, HexyPairs> = {};
 
+console.log("some1");
+
 export function initializeHexyPairListForNewGame() {
     return
 }

@@ -1,6 +1,6 @@
 import type { Store } from "redux";
 import { BuildMode } from "./log";
-import { LogLevel, PermanentAny, Rect } from "./types";
+import { LogLevel, PermanentAny } from "./types";
 
 export interface GenialGlobal {
     logLevel: LogLevel;

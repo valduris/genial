@@ -1,14 +1,4 @@
-import {
-    BoardHexy,
-    Color,
-    DeepPick,
-    FirstParam,
-    Game,
-    GenialCommon,
-    GenialInProgress,
-    PlayerHexyPair,
-    Point, Uuid4
-} from "./types";
+import { BoardHexy, Color, DeepPick, FirstParam, GenialCommon, GenialInProgress, PlayerHexyPair, Point, Uuid4 } from "./types";
 import { getNeighboringHexysOf, getSpecialCornerColorByPoint, areNeighbors, isPointSpecialCorner } from "./utils";
 
 export function selectPlayerSelectedHexyPair(state: DeepPick<GenialInProgress, "player", "hexyPairs">): PlayerHexyPair | undefined {

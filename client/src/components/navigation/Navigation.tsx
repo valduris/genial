@@ -1,11 +1,12 @@
 import * as React from "react";
 
+/* eslint-disable jsx-a11y/anchor-is-valid */
 export function Navigation() {
     return (
         <nav className="navbar is-transparent" role="navigation" aria-label="main navigation">
             <div className="navbar-brand">
                 <a className="navbar-item" href="localhost:3000">
-                    <img src={require("./navigationLogo.png")} width="112" height="28" />
+                    <img src={require("./navigationLogo.png")} width="112" height="28" alt="" />
                 </a>
                 <a role="button" className="navbar-burger" aria-label="menu" aria-expanded="false"
                    data-target="navbarBasicExample">

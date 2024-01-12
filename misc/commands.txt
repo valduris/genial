@@ -3,7 +3,7 @@ yarn start
 
 cd ~/src/geniali/server
 npx prisma studio
-
+npx prisma generate --schema=./src/prisma/schema.prisma
 npx prisma migrate dev
 
 ./node_modules/.bin/tsc ./src/api/typesForClient.ts --declaration --emitDeclarationOnly --outfile ./dist/outFile.d.ts

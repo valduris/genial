@@ -1,5 +1,5 @@
 import { SET_GENIAL_UI_STATE } from "./consts";
-import { Api, fetchJson } from "./api";
+import { fetchJson } from "./api";
 
 export type PermanentAny = any;
 
@@ -38,11 +38,6 @@ export interface Player {
 export interface Point {
     x: number;
     y: number;
-}
-
-export interface Rect extends Point {
-    width: number;
-    height: number;
 }
 
 export type UnixTimestamp = number;
@@ -173,7 +168,6 @@ export enum LocalStorageKey {
 }
 
 export interface ThunkExtraArguments {
-    Api: typeof Api;
     fetchJson: typeof fetchJson,
 }
 

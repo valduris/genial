@@ -8,7 +8,7 @@ import { Dispatch, EventSourceState, GameStatus, Genial, GenialLobby, LocalStora
 import { GenialUiConnected } from "./GenialUi";
 import { GENIAL_GLOBAL } from "./global";
 import { SET_GENIAL_UI_STATE } from "./consts";
-import { Api, fetchJson } from "./api";
+import { fetchJson } from "./api";
 
 import "./Genial.css";
 import { uuid4 } from "./utils";
@@ -66,7 +66,7 @@ export function onGameKeyDown(keyCode: number, initializeResult: InitializeResul
     return (dispatch, getState) => {
         const game = getState();
 
-        if (keyCode == 27) { // escape
+        if (keyCode === 27) { // escape
             game.menu.open = !game.menu.open;
         } else if (keyCode === 37) { // left
 
@@ -111,7 +111,6 @@ export interface InitializeResult {
 export async function initialize(): Promise<InitializeResult> {
     const rootNode = document.getElementById("root") as HTMLDivElement;
     const thunkExtraArguments: ThunkExtraArguments = {
-        Api: Api,
         fetchJson: fetchJson,
     };
     const rootReducer = createGenialReducer();
@@ -129,8 +128,6 @@ export async function initialize(): Promise<InitializeResult> {
     }
 
     GENIAL_GLOBAL.store = store;
-
-    const games = [{}];
 
     fetchJson("http://localhost:3300/api/games", { method: "GET" }).then((games) => {
         store.dispatch(setGenialState({ games: games, loadingState: games.length > 0 ? "loaded" : "noGames" }));
