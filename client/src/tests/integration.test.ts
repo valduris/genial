@@ -9,7 +9,7 @@ import {
     createPlayerHexyPair,
     getMenuOptionsByGameTypeAndStatus
 } from "../utils";
-import { BoardHexyPairs, BoardSize, GameStatus, GenialInProgress, PlayerCount, UnixTimestamp } from "../types";
+import { BoardHexyPairs, BoardSize, GameStatus, Genial, PlayerCount, UnixTimestamp } from "../types";
 
 
 // beforeAll(() => {
@@ -25,7 +25,7 @@ import { BoardHexyPairs, BoardSize, GameStatus, GenialInProgress, PlayerCount, U
 //     boardSize: BoardSize;
 //     gameId: string;
 //     playerCount: PlayerCount,
-// }): GenialInProgress {
+// }): Genial {
 //     const team0Player0 = createPlayer({
 //         name: "Human player",
 //         hexyPairs: [

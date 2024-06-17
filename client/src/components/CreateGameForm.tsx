@@ -4,7 +4,7 @@ import classNames from "classnames";
 import * as React from "react";
 
 import { translate } from "../utils";
-import { BoardSize, Game, GameStatus, GenialLobby, PlayerCount, Thunk } from "../types";
+import { BoardSize, Game, GameStatus, Genial, PlayerCount, Thunk } from "../types";
 
 import { setGenialState } from "../index";
 import { selectPlayerUuid } from "../selectors";
@@ -44,7 +44,8 @@ export function CreateGameForm(props: CreateGameFormProps) {
     }, [setFormState]);
 
     return (
-        <>
+        <div className={"createGameContainer"}>
+            <h1>{translate("createGame")}</h1>
             <div className="field is-horizontal">
                 <div className="field-label is-normal">
                     <label
@@ -183,17 +184,17 @@ export function CreateGameForm(props: CreateGameFormProps) {
                     </button>
                 </div>
             </div>
-        </>
+        </div>
     );
 }
 
 export const CreateGameFormConnected = connect<any, any, any, any>(undefined, { onSubmit: onCreateGameFormSubmit })(CreateGameForm);
 
-export function onCreateGameFormSubmit(data: CreateGameFormFormState): Thunk<GenialLobby> {
+export function onCreateGameFormSubmit(data: CreateGameFormFormState): Thunk<Genial> {
     return async (dispatch, getState, { fetchJson }) => {
         const playerUuid = selectPlayerUuid(getState());
         const body: any = { ...data, adminUuid: playerUuid };
-        const result = await fetchJson("http://localhost:3300/api/game", { body: JSON.stringify(body) });
+        const result = await fetchJson("http://localhost:8080/api/game", { body: JSON.stringify(body) });
         console.log(result);
         dispatch(setGenialState(immer.produce(getState(), state => {
             state.game = {

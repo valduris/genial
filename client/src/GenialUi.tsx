@@ -2,25 +2,15 @@ import * as immer from "immer";
 import * as React from "react";
 import { connect } from "react-redux";
 
-import { Thunk, PlayerHexyPairIndex, GenialInProgress, GameStatus, Genial, GenialLobby } from "./types"
+import { Thunk, PlayerHexyPairIndex, Genial, GameStatus } from "./types"
 import { setGenialState } from "./index";
 import { LobbyGameListConnected, PlayerHexyPairListConnected, ProgressConnected } from "./components";
 import { BoardConnected } from "./components/Board";
 import { CreateGameFormConnected } from "./components/CreateGameForm";
 import { LobbyGameConnected } from "./components/lobbyGame/LobbyGame";
 import { Navigation } from "./components/navigation/Navigation";
-// import { type prismaCreateGame } from "./serverTypes";
-import { type ServerSentEvent } from "types";
-// import { type ServerSentEvent } from "validators";
-
-// type Ret = ReturnType<typeof prismaCreateGame>;
-
-const x: ServerSentEvent = "sfd";
-    // x: "234",
-// }
 
 export interface GenialUiStateProps {
-    status: GameStatus;
     game: Pick<Genial, "game">;
 }
 
@@ -29,14 +19,20 @@ export function GenialUi(props: GenialUiStateProps) {
         <div className="genial">
             <Navigation />
             <hr />
-            {props.status === GameStatus.Lobby && (
+            {!props.game && (
                 <>
-                    {!props.game && <CreateGameFormConnected />}
-                    <LobbyGameListConnected />
-                    <LobbyGameConnected />
+                    <div className="columns">
+                        <div className="column is-4">
+                            {!props.game && <CreateGameFormConnected />}
+                        </div>
+                        <div className="column is-8">
+                            <LobbyGameListConnected />
+                            <LobbyGameConnected />
+                        </div>
+                    </div>
                 </>
             )}
-            {props.status === GameStatus.InProgress && (
+            {props.game && props.game.status === GameStatus.InProgress && (
                 <>
                     <BoardConnected />
                     <PlayerHexyPairListConnected />
@@ -47,12 +43,11 @@ export function GenialUi(props: GenialUiStateProps) {
     );
 }
 
-export const GenialUiConnected = connect<any, any, any, any>((state: GenialLobby) => ({
+export const GenialUiConnected = connect<any, any, any, any>((state: Genial) => ({
     game: state.game,
-    status: state.status,
 }))(GenialUi);
 
-export type OnPlayerHexyPairClickState = GenialInProgress;
+export type OnPlayerHexyPairClickState = Genial;
 
 export function onPlayerHexyPairClick(hexyPairIndex: PlayerHexyPairIndex, hexyIndex: 0 | 1): Thunk<OnPlayerHexyPairClickState> {
     return (dispatch, getState) => {

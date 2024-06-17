@@ -1,7 +1,7 @@
 import * as React from "react";
 import { connect } from "react-redux";
 import classNames from "classnames";
-import { Game, GenialInProgress, Player, PlayerHexyPairIndex } from "../types";
+import { Game, Genial, Player, PlayerHexyPairIndex } from "../types";
 import { onPlayerHexyPairClick } from "../GenialUi";
 import { HexyComponent } from "./Hexy";
 
@@ -52,6 +52,6 @@ export function PlayerHexyPairList(props: PlayerHexyPairListProps) {
 }
 
 export const PlayerHexyPairListConnected = connect<any, any, any, any>(
-    (state: GenialInProgress) => ({ game: state }),
+    (state: Genial) => ({ game: state }),
     { onPlayerHexyPairClick: onPlayerHexyPairClick },
 )(PlayerHexyPairList);

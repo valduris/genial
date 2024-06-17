@@ -54,7 +54,6 @@ export type PlayerCount = 2 | 3 | 4;
 export type MenuOption = "resume" | "pause" | "quitGame"; // "saveReplay" | "loadReplay"
 
 export enum GameStatus {
-    MainMenu = "mainMenu",
     InProgress = "inProgress",
     Lobby = "lobby",
 }
@@ -83,11 +82,6 @@ export type DrawableHexyPair = [DrawableHexy, DrawableHexy];
 export type DrawableHexyPairs = DrawableHexyPair[];
 
 export type SpecialCorners = [BoardHexy, BoardHexy, BoardHexy, BoardHexy, BoardHexy, BoardHexy];
-
-export interface GenialInProgress extends GenialCommon {
-    game: Game;
-    player: Player;
-}
 
 export interface LobbyGame {
     uuid: Uuid4;
@@ -124,15 +118,8 @@ export interface Game {
     playerCount: PlayerCount;
     public: boolean;
     showProgress: boolean;
-    status: "Created";
+    status: GameStatus;
     uuid: "eb6a6aa6-4cbe-459f-bee7-c78478a95c36"
-}
-
-export interface GenialLobby extends GenialCommon {
-    games: LobbyGames;
-    status: GameStatus.Lobby;
-    loadingState: GamesLoadingState;
-    game?: Game;
 }
 
 export enum EventSourceState {
@@ -141,7 +128,8 @@ export enum EventSourceState {
     CLOSED = 2,
 }
 
-export interface GenialCommon {
+export interface Genial {
+    games: LobbyGames;
     eventSourceState: EventSourceState;
     authenticated: boolean;
     playerUuid: Uuid4;
@@ -150,9 +138,9 @@ export interface GenialCommon {
         entries: MenuOption[];
         selectedEntryIndex: number;
     },
+    game: Game;
+    player: Player;
 }
-
-export type Genial = GenialInProgress | GenialLobby;
 
 export type HexColor = string;
 

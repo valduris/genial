@@ -19,7 +19,7 @@ import {
 } from "../selectors";
 import { HexyComponent } from "./Hexy";
 import {
-    GenialInProgress,
+    Genial,
     PlayerHexyPair,
     Point,
     ProgressValue,
@@ -36,8 +36,8 @@ export interface BoardOwnProps {
 }
 
 export interface BoardStateProps {
-    game: GenialInProgress["game"];
-    player: GenialInProgress["player"];
+    game: Genial["game"];
+    player: Genial["player"];
 }
 
 export interface BoardDispatchProps {
@@ -128,14 +128,14 @@ export function Board(props: BoardProps) {
 }
 
 export const BoardConnected = connect<any, any, any, any>(
-    (state: GenialInProgress) => ({ game: state.game, player: state.player }),
+    (state: Genial) => ({ game: state.game, player: state.player }),
     {
         onBoardHexyMouseEnter: onBoardHexyMouseEnter,
         onPreviewedBoardHexyClick: onPreviewedBoardHexyClick,
     },
 )(Board);
 
-export type OnBoardHexyMouseEnterState = GenialInProgress;
+export type OnBoardHexyMouseEnterState = Genial;
 
 export function onBoardHexyMouseEnter(point: Point): Thunk<OnBoardHexyMouseEnterState> {
     return (dispatch, getState) => {
@@ -147,7 +147,7 @@ export function onBoardHexyMouseEnter(point: Point): Thunk<OnBoardHexyMouseEnter
     };
 }
 
-export type OnPreviewedBoardHexyClickState = GenialInProgress;
+export type OnPreviewedBoardHexyClickState = Genial;
 
 export function onPreviewedBoardHexyClick(point: Point, preview: boolean): Thunk<OnPreviewedBoardHexyClickState> {
     return (dispatch, getState, { Api }) => {

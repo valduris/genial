@@ -1,14 +1,10 @@
-cd ~/src/geniali/client
+cd ~/src/genial/client
 yarn start
 
-cd ~/src/geniali/server
-npx prisma studio
+cd ~/src/genial/server
+cargo watch -c -w src -x run
 
-npx prisma migrate dev
-
-./node_modules/.bin/tsc ./src/api/typesForClient.ts --declaration --emitDeclarationOnly --outfile ./dist/outFile.d.ts
 
 # PSQL
-psql -c 'create schema blablatest2'
 psql -c 'select * from test;'
 

@@ -5,17 +5,17 @@ import {
     FirstParam,
     Game,
     GenialCommon,
-    GenialInProgress,
+    Genial,
     PlayerHexyPair,
     Point, Uuid4
 } from "./types";
 import { getNeighboringHexysOf, getSpecialCornerColorByPoint, areNeighbors, isPointSpecialCorner } from "./utils";
 
-export function selectPlayerSelectedHexyPair(state: DeepPick<GenialInProgress, "player", "hexyPairs">): PlayerHexyPair | undefined {
+export function selectPlayerSelectedHexyPair(state: DeepPick<Genial, "player", "hexyPairs">): PlayerHexyPair | undefined {
     return state.player.hexyPairs.find(hexyPair => hexyPair?.some(hexy => hexy.selected));
 }
 
-export function selectPlayerSelectedHexyPairHexyColor(state: DeepPick<GenialInProgress, "player", "hexyPairs">): Color | undefined {
+export function selectPlayerSelectedHexyPairHexyColor(state: DeepPick<Genial, "player", "hexyPairs">): Color | undefined {
     return state.player.hexyPairs.reduce((memo: Color | undefined, hexyPair) => {
         if (memo || !hexyPair) {
             return memo;
@@ -32,7 +32,7 @@ export function selectPlayerSelectedHexyPairHexyColor(state: DeepPick<GenialInPr
 }
 
 export function selectIsHexyPreviewed<T extends Point>(
-    state: DeepPick<GenialInProgress, "player", "hoveredHexyCoords"> & FirstParam<typeof selectPlayerSelectedHexyPair>
+    state: DeepPick<Genial, "player", "hoveredHexyCoords"> & FirstParam<typeof selectPlayerSelectedHexyPair>
         & FirstParam<typeof selectPlayerSelectedHexyPairHexyColor>,
     point: T,
 ): boolean {
@@ -47,7 +47,7 @@ export function selectIsHexyPreviewed<T extends Point>(
     return !!preview;
 }
 
-export function selectFirstPlacedHexy(state: DeepPick<GenialInProgress, "player", "firstPlacedHexy">): BoardHexy | undefined {
+export function selectFirstPlacedHexy(state: DeepPick<Genial, "player", "firstPlacedHexy">): BoardHexy | undefined {
     return state.player.firstPlacedHexy;
 }
 
@@ -100,7 +100,7 @@ export function selectHexyStyleByPoint(state: SelectHexyStyleByPointState, point
 //            => cancel
 export type SelectIsPointAllowedToReceiveHoverState = FirstParam<[typeof selectFirstPlacedHexy]> & FirstParam<typeof selectPlayerSelectedHexyPair>
     & FirstParam<typeof selectIsPointCoveredWithHexy> & FirstParam<typeof selectPlayerSelectedHexyPairHexyColor>
-    & DeepPick<GenialInProgress, "game", "hexyPairs" | "boardSize">;
+    & DeepPick<Genial, "game", "hexyPairs" | "boardSize">;
 
 export function selectIsPointAllowedToReceiveHover(state: SelectIsPointAllowedToReceiveHoverState, point: Point): boolean {
     const firstPlacedHexy = selectFirstPlacedHexy(state);
@@ -135,13 +135,13 @@ export function selectIsPointAllowedToReceiveHover(state: SelectIsPointAllowedTo
     return true;
 }
 
-export function selectIsPointCoveredWithHexy(state: DeepPick<GenialInProgress, "game", "hexyPairs">, point: Point): boolean {
+export function selectIsPointCoveredWithHexy(state: DeepPick<Genial, "game", "hexyPairs">, point: Point): boolean {
     return state.game.hexyPairs.some(hexyPair => {
         return hexyPair.some(hexy => hexy.x === point.x && hexy.y === point.y);
     });
 }
 
-export function selectGameId(state: DeepPick<GenialInProgress, "game", "uuid">): string {
+export function selectGameId(state: DeepPick<Genial, "game", "uuid">): string {
     return state.game.uuid;
 }
 

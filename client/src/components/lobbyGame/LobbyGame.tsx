@@ -3,7 +3,7 @@ import * as immer from "immer";
 import { connect } from "react-redux";
 
 import { mapTimes, translate } from "../../utils";
-import { Game, GameStatus, GenialLobby, LobbyGames, Thunk, Uuid4 } from "../../types";
+import { Game, GameStatus, Genial, LobbyGames, Thunk, Uuid4 } from "../../types";
 import { setGenialState } from "../../index";
 import { selectPlayerUuid } from "../../selectors";
 import { fetchJson } from "../../api";
@@ -89,7 +89,7 @@ export function LobbyGame(props: LobbyGameProps) {
     );
 }
 
-export const LobbyGameConnected = connect<any, any, any, any>((state: GenialLobby) => ({
+export const LobbyGameConnected = connect<any, any, any, any>((state: Genial) => ({
     games: state.games,
     game: state.game,
     loadingState: state.loadingState,
@@ -97,10 +97,10 @@ export const LobbyGameConnected = connect<any, any, any, any>((state: GenialLobb
     adminUuid: selectPlayerUuid(state),
 }), { onStartGame: onStartGame, onLeaveGame: onLeaveGame })(LobbyGame);
 
-export function onLeaveGame(gameUuid: Uuid4): Thunk<GenialLobby> {
+export function onLeaveGame(gameUuid: Uuid4): Thunk<Genial> {
     return async (dispatch, getState) => {
         const state = getState();
-        const result = await fetchJson("http://localhost:3300/api/game/leave", {
+        const result = await fetchJson("http://localhost:8080/api/game/leave", {
             body: JSON.stringify({
                 playerUuid: selectPlayerUuid(state),
                 gameId: state.game?.uuid,
@@ -120,7 +120,7 @@ export function onStartGame(gameUuid: Uuid4): Thunk {
     return async (dispatch, getState) => {
         const playerUuid = selectPlayerUuid(getState());
         const body = { adminUuid: playerUuid };
-        const result = await fetchJson("http://localhost:3300/api/game", { body: JSON.stringify(body) });
+        const result = await fetchJson("http://localhost:8080/api/game", { body: JSON.stringify(body) });
         console.log(result);
         dispatch(setGenialState(immer.produce(getState(), state => {
             state.game = {

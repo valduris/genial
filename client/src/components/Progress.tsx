@@ -1,7 +1,7 @@
 import * as React from "react";
 import { connect } from "react-redux";
 import classNames from "classnames";
-import { DeepPick, Game, GenialInProgress } from "../types";
+import { DeepPick, Game, Genial } from "../types";
 import { mapTimes } from "../utils";
 import { onPlayerHexyPairClick } from "../GenialUi";
 import { COLORS } from "../consts";
@@ -46,8 +46,8 @@ export function Progress(props: ProgressProps) {
     );
 }
 
-// MapStateToPropsParam<GenialInProgressProps, GenialUiOwnProps, any>
+// MapStateToPropsParam<GenialProps, GenialUiOwnProps, any>
 export const ProgressConnected = connect<any, any, any, any>(
-    (state: GenialInProgress) => ({ game: state }),
+    (state: Genial) => ({ game: state }),
     { onPlayerHexyPairClick: onPlayerHexyPairClick },
 )(Progress);

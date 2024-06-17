@@ -3,7 +3,7 @@ import * as ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
 import { applyMiddleware, createStore, DeepPartial } from "redux";
 import thunk from "redux-thunk";
-import { Dispatch, EventSourceState, GameStatus, Genial, GenialLobby, LocalStorageKey, PermanentAny, Thunk, ThunkExtraArguments, Uuid4 } from "./types"
+import { Dispatch, EventSourceState, GameStatus, Genial, LocalStorageKey, PermanentAny, Thunk, ThunkExtraArguments, Uuid4 } from "./types"
 
 import { GenialUiConnected } from "./GenialUi";
 import { GENIAL_GLOBAL } from "./global";
@@ -27,7 +27,7 @@ export function setGenialState(state: DeepPartial<Genial>): Thunk {
     };
 }
 
-export const initialGenialState: GenialLobby = {
+export const initialGenialState: Genial = {
     eventSourceState: EventSourceState.CLOSED,
     menu: {
         open: false,
@@ -132,7 +132,7 @@ export async function initialize(): Promise<InitializeResult> {
 
     const games = [{}];
 
-    fetchJson("http://localhost:3300/api/games", { method: "GET" }).then((games) => {
+    fetchJson("http://localhost:8080/api/games", { method: "GET" }).then((games) => {
         store.dispatch(setGenialState({ games: games, loadingState: games.length > 0 ? "loaded" : "noGames" }));
     });
 
@@ -157,7 +157,7 @@ export async function initialize(): Promise<InitializeResult> {
         // TODO show browser unsupported popup
     }
 
-    const source = new EventSource(`http://localhost:3300/events/${getOrCreatePlayerUuidForUnauthenticatedPlayer()}`);
+    const source = new EventSource(`http://localhost:8080/events/${getOrCreatePlayerUuidForUnauthenticatedPlayer()}`);
 
     source.addEventListener("message", (e) => {
         store.dispatch(onEventSourceMessage(JSON.parse(e.data)));
@@ -177,7 +177,7 @@ export async function initialize(): Promise<InitializeResult> {
 export function onEventSourceMessage(data: object): Thunk {
     return (dispatch, getState) => {
         if ("ping" in data) {
-            fetchJson("http://localhost:3300/api/pong", {
+            fetchJson("http://localhost:8080/api/pong", {
                 body: JSON.stringify({ playerUuid: selectPlayerUuid(getState()) }),
             });
         } else if ("playerJoined" in data) {

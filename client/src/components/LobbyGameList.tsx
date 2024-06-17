@@ -3,7 +3,7 @@ import { connect } from "react-redux";
 import * as immer from "immer";
 
 import { translate } from "../utils";
-import { GamesLoadingState, GameStatus, GenialLobby, LobbyGames, PlayerCount, Thunk, Uuid4 } from "../types";
+import { GamesLoadingState, GameStatus, Genial, LobbyGames, PlayerCount, Thunk, Uuid4 } from "../types";
 import { log } from "../log";
 
 import { selectPlayerUuid } from "../selectors";
@@ -65,12 +65,12 @@ export function LobbyGameList(props: LobbyGameListProps) {
     );
 }
 
-export const LobbyGameListConnected = connect<any, any, any, any>((state: GenialLobby) => ({
+export const LobbyGameListConnected = connect<any, any, any, any>((state: Genial) => ({
     games: state.games,
     loadingState: state.loadingState,
 }), { onJoinGame: onJoinGame })(LobbyGameList);
 
-export function onJoinGame(gameUuid: Uuid4): Thunk<GenialLobby> {
+export function onJoinGame(gameUuid: Uuid4): Thunk<Genial> {
     return async (dispatch, getState, { fetchJson }) => {
         log.info("getState() before onJoinGame", getState());
 
@@ -78,7 +78,7 @@ export function onJoinGame(gameUuid: Uuid4): Thunk<GenialLobby> {
             gameUuid: gameUuid,
             playerUuid: selectPlayerUuid(getState()),
         };
-        const result: any = await fetchJson("http://localhost:3300/api/game/join", { body: JSON.stringify(params) });
+        const result: any = await fetchJson("http://localhost:8080/api/game/join", { body: JSON.stringify(params) });
         log.info(result);
         dispatch(setGenialState(immer.produce(getState(), state => {
             state.game = {

@@ -18,7 +18,7 @@ import {
     MenuOption,
     PermanentAny,
     PlayerHexyPair,
-    DeepPick, GenialInProgress,
+    DeepPick, Genial,
 } from "./types";
 import { translations } from "./translations/en";
 
@@ -163,7 +163,7 @@ export function createDrawableHexyPairs(): DrawableHexyPairs {
     }, []);
 }
 
-export function calulateProgressGained(state: DeepPick<GenialInProgress, "game", "hexyPairs">, hexyPair: BoardHexyPair): Progress {
+export function calulateProgressGained(state: DeepPick<Genial, "game", "hexyPairs">, hexyPair: BoardHexyPair): Progress {
     const progressGained: Progress = hexyPair.reduce((outerMemo: Progress, hexy) => {
         return DIRECTIONS.reduce((progress, direction) => {
             for (

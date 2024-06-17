@@ -21,7 +21,7 @@ async function placeHexyPairOnBoard(params: {
     gameId: string,
     hexy: BoardHexyPair,
 }) {
-    const fetchResult = await fetch("http://localhost:3300/api/game/placeHexy");
+    const fetchResult = await fetch("http://localhost:8080/api/game/placeHexy");
     const result = await fetchResult.json();
 
     return result;
