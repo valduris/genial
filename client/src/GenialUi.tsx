@@ -12,6 +12,8 @@ import { LobbyGameConnected } from "./components/lobbyGame/LobbyGame";
 import { Navigation } from "./components/navigation/Navigation";
 import { GameStartFormConnected } from "./components/GameStartForm";
 
+import '@mantine/core/styles.css';
+
 export interface GenialUiStateProps {
     game: Genial["game"];
 }

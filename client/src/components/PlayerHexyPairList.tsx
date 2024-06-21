@@ -1,7 +1,7 @@
 import * as React from "react";
 import { connect } from "react-redux";
 import classNames from "classnames";
-import { Game, Genial, Player, PlayerHexyPairIndex } from "../types";
+import { Genial, Player, PlayerHexyPairIndex } from "../types";
 import { onPlayerHexyPairClick } from "../GenialUi";
 import { HexyComponent } from "./Hexy";
 
