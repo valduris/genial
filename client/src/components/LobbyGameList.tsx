@@ -66,8 +66,7 @@ export function LobbyGameList(props: LobbyGameListProps) {
 }
 
 export const LobbyGameListConnected = connect<any, any, any, any>((state: Genial) => ({
-    games: state.games,
-    loadingState: state.loadingState,
+    games: state.lobbyGames,
 }), { onJoinGame: onJoinGame })(LobbyGameList);
 
 export function onJoinGame(gameUuid: Uuid4): Thunk<Genial> {

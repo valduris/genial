@@ -13,4 +13,5 @@ export const translations = {
     gameName: "Game name",
     leaveGame: "Leave game",
     waitingForPlayerToJoin: "Waiting for player to join...",
+    gameStart: "Check \"ready\" to start the game...",
 } as const;

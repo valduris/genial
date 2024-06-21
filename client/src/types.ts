@@ -32,7 +32,6 @@ export interface Player {
     hexyPairs: PlayerHexyPairs;
     firstPlacedHexy: BoardHexy | undefined;
     movesInTurn: number;
-    progress: Progress;
 }
 
 export interface Point {
@@ -99,9 +98,9 @@ export type GamesLoadingState = "noGames" | "loading" | "loaded";
 
 export interface Game {
     adminUuid: Uuid4;
-    authorId: number;
+    authorId: string;
     boardSize: BoardSize;
-    createdAt: "2023-01-18T09:42:39.417Z";
+    createdAt: string;
     finished: false;
     players: Array<{
         id: number;
@@ -110,16 +109,13 @@ export interface Game {
     }>;
     drawableHexyPairs: DrawableHexyPairs;
     hexyPairs: BoardHexyPairs;
-    player: {
-        hexyPairs: PlayerHexyPairs,
-        progress: Progress;
-    },
+    progress: Record<Uuid4, Progress>;
     name: string;
     playerCount: PlayerCount;
     public: boolean;
     showProgress: boolean;
     status: GameStatus;
-    uuid: "eb6a6aa6-4cbe-459f-bee7-c78478a95c36"
+    uuid: Uuid4;
 }
 
 export enum EventSourceState {
@@ -129,7 +125,8 @@ export enum EventSourceState {
 }
 
 export interface Genial {
-    games: LobbyGames;
+    loadingState: GamesLoadingState;
+    lobbyGames: LobbyGames;
     eventSourceState: EventSourceState;
     authenticated: boolean;
     playerUuid: Uuid4;
@@ -138,8 +135,10 @@ export interface Genial {
         entries: MenuOption[];
         selectedEntryIndex: number;
     },
+    gameUuid?: string;
     game: Game;
     player: Player;
+    players: Record<Uuid4, Player>;
 }
 
 export type HexColor = string;

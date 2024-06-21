@@ -90,9 +90,7 @@ export function LobbyGame(props: LobbyGameProps) {
 }
 
 export const LobbyGameConnected = connect<any, any, any, any>((state: Genial) => ({
-    games: state.games,
-    game: state.game,
-    loadingState: state.loadingState,
+    games: state.lobbyGames,
     playerUuid: selectPlayerUuid(state),
     adminUuid: selectPlayerUuid(state),
 }), { onStartGame: onStartGame, onLeaveGame: onLeaveGame })(LobbyGame);

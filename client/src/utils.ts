@@ -4,10 +4,6 @@ import {
     BoardHexyPair,
     BoardHexyPairs,
     BoardSize,
-    Point,
-    Progress,
-    Sound,
-    Uuid4,
     Color,
     Direction,
     DrawableHexyPair,
@@ -18,7 +14,10 @@ import {
     MenuOption,
     PermanentAny,
     PlayerHexyPair,
-    DeepPick, Genial,
+    Point,
+    Progress,
+    Sound,
+    Uuid4,
 } from "./types";
 import { translations } from "./translations/en";
 
@@ -47,6 +46,7 @@ export function createPromise<T>(): CreatePromiseReturnType<T> {
     }
 }
 
+//eslint-disable no-mixed-operators
 export function uuid4(): Uuid4 {
     // @ts-ignore: TS2365
     return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, (c: number) =>
@@ -112,13 +112,13 @@ export function createHexy(x: number, y: number, color: Color): BoardHexy {
 }
 
 export function getMenuOptionsByGameTypeAndStatus(status: GameStatus): MenuOption[] {
-    if (status === "mainMenu") {
+    if (status === GameStatus.InProgress) {
         return ["quitGame"]; // "loadReplay"
-    } else if (status === "inProgress") {
+    // } else if (status === "inProgress") {
         // if (type === "replay") {
         //     return ["resume", "pause", "quitGame"]; // "loadReplay"
         // }
-        return ["resume", "pause", "quitGame"]; //"saveReplay", "loadReplay"
+        // return ["resume", "pause", "quitGame"]; //"saveReplay", "loadReplay"
     } else if (status === "lobby") {
         return ["quitGame"];
     }
@@ -163,20 +163,19 @@ export function createDrawableHexyPairs(): DrawableHexyPairs {
     }, []);
 }
 
-export function calulateProgressGained(state: DeepPick<Genial, "game", "hexyPairs">, hexyPair: BoardHexyPair): Progress {
+export function calulateProgressGained(game: Pick<Game, "hexyPairs">, hexyPair: BoardHexyPair): Progress {
     const progressGained: Progress = hexyPair.reduce((outerMemo: Progress, hexy) => {
         return DIRECTIONS.reduce((progress, direction) => {
             for (
                 let tempPoint: Point = getNextPointInDirection(hexy, direction),
-                    color = getColorByPoint(state.game.hexyPairs, tempPoint);
+                    color = getColorByPoint(game.hexyPairs, tempPoint);
                 color === hexy.color;
                 progress[color] += 1,
                 tempPoint = getNextPointInDirection(tempPoint, direction),
-                color = getColorByPoint(state.game.hexyPairs, tempPoint)
+                color = getColorByPoint(game.hexyPairs, tempPoint)
             );
             return progress;
         }, outerMemo);
-        return outerMemo;
     }, createEmptyProgress());
 
     return progressGained;

@@ -1,6 +1,6 @@
 use std::{time::Duration};
 use dotenv::dotenv;
-use actix_web::{http::header, Responder, web, App, HttpServer, delete, get, patch, post, HttpResponse};
+use actix_web::{http::header, Responder, web, App, HttpServer, delete, get, patch, post, HttpResponse, http::header::ContentType};
 mod broadcast;
 // use tower_http::cors::{Any, CorsLayer};
 use self::broadcast::Broadcaster;
@@ -39,17 +39,15 @@ pub struct AppState {
     postgres_pool: Pool<Postgres>,
 }
 
-pub async fn sse_client(state: web::Data<AppState>) -> impl Responder {
-    println!("in api");
-    state.broadcaster.new_client().await
-}
-
-pub async fn broadcast_msg(
+pub async fn sse_connect_client(
     state: web::Data<AppState>,
-    Path((msg,)): Path<(String,)>,
+    Path((uuid,)): Path<(String,)>,
 ) -> impl Responder {
-    state.broadcaster.broadcast(&msg).await;
-    HttpResponse::Ok().body("msg sent")
+    state.broadcaster.new_client().await;
+    HttpResponse::Ok()
+        .insert_header(("Content-Type", "text/event-stream"))
+        .insert_header(("Cache-Control", "no-cache"))
+        .body("data")
 }
 
 #[derive(Deserialize, sqlx::FromRow)]
@@ -73,7 +71,7 @@ pub async fn api_get_games(state: web::Data<AppState>) -> impl Responder {
         .unwrap();
     // let one: i32 = row.get("id").unwrap();
     println!("{:?}", row);
-    HttpResponse::Ok().body("msg sent!!")
+    HttpResponse::Ok().body("{\"games\": \"here\"}")
     // let mut conn = state.postgres_pool.acquire().await.expect("Could not acquire connection pool #2");
     // let mut games = sqlx::query_as::<_, ApiGetGames>(r#"SELECT name FROM game;"#).fetch_all(&state.postgres_pool);
     // games.for_each(|game| println!("{:#?}", game));
@@ -112,9 +110,7 @@ async fn api_game_create(
         .execute(&data.postgres_pool)
         .await;
 
-    // data.broadcaster.broadcast(serde_json::json!({
-    //     "type"
-    // })
+    data.broadcaster.broadcast("{\"type\": \"game_created\"}");
 
     match query_result {
         Ok(_) => {
@@ -164,10 +160,7 @@ async fn main() -> std::io::Result<()> {
                 postgres_pool: pool.clone(),
             }))
             .wrap(cors)
-            // This route is used to listen events/ sse events
-            .route("/events{_:/?}", web::get().to(sse_client))
-            // This route will create notification
-            .route("/events/{msg}", web::get().to(broadcast_msg))
+            .route("/events/{uuid}", web::get().to(sse_connect_client))
             .route("/api/games", web::get().to(api_get_games))
             .route("/api/game", web::post().to(api_game_create))
     })

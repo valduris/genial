@@ -1,45 +1,52 @@
 import * as immer from "immer";
 import * as React from "react";
 import { connect } from "react-redux";
+import { createTheme, MantineProvider } from '@mantine/core';
 
 import { Thunk, PlayerHexyPairIndex, Genial, GameStatus } from "./types"
 import { setGenialState } from "./index";
-import { LobbyGameListConnected, PlayerHexyPairListConnected, ProgressConnected } from "./components";
+import { LobbyGameListConnected, PlayerHexyPairListConnected, ProgressBarsConnected } from "./components";
 import { BoardConnected } from "./components/Board";
 import { CreateGameFormConnected } from "./components/CreateGameForm";
 import { LobbyGameConnected } from "./components/lobbyGame/LobbyGame";
 import { Navigation } from "./components/navigation/Navigation";
+import { GameStartFormConnected } from "./components/GameStartForm";
 
 export interface GenialUiStateProps {
-    game: Pick<Genial, "game">;
+    game: Genial["game"];
 }
+
+const theme = createTheme({});
 
 export function GenialUi(props: GenialUiStateProps) {
     return (
-        <div className="genial">
-            <Navigation />
-            <hr />
-            {!props.game && (
-                <>
-                    <div className="columns">
-                        <div className="column is-4">
-                            {!props.game && <CreateGameFormConnected />}
+        <MantineProvider theme={theme}>
+            <div className="genial">
+                <Navigation />
+                <hr />
+                {!props.game && (
+                    <>
+                        <div className="columns">
+                            <div className="column is-4">
+                                {!props.game && <CreateGameFormConnected />}
+                            </div>
+                            <div className="column is-8">
+                                <LobbyGameListConnected />
+                                <LobbyGameConnected />
+                            </div>
                         </div>
-                        <div className="column is-8">
-                            <LobbyGameListConnected />
-                            <LobbyGameConnected />
-                        </div>
-                    </div>
-                </>
-            )}
-            {props.game && props.game.status === GameStatus.InProgress && (
-                <>
-                    <BoardConnected />
-                    <PlayerHexyPairListConnected />
-                    <ProgressConnected />
-                </>
-            )}
-        </div>
+                    </>
+                )}
+                <GameStartFormConnected />
+                {props.game && props.game.status === GameStatus.InProgress && (
+                    <>
+                        <BoardConnected />
+                        <PlayerHexyPairListConnected />
+                        <ProgressBarsConnected />
+                    </>
+                )}
+            </div>
+        </MantineProvider>
     );
 }
 

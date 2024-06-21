@@ -14,5 +14,5 @@
     "skipLibCheck": true,
     "strict": true
   },
-  "types" : ["node", "lodash", "express", "./src/serverTypes.d.ts"]
+  "types" : ["node", "lodash", "jest"]
 }

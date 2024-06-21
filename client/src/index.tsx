@@ -3,7 +3,18 @@ import * as ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
 import { applyMiddleware, createStore, DeepPartial } from "redux";
 import thunk from "redux-thunk";
-import { Dispatch, EventSourceState, GameStatus, Genial, LocalStorageKey, PermanentAny, Thunk, ThunkExtraArguments, Uuid4 } from "./types"
+import {
+    Dispatch,
+    EventSourceState,
+    Game,
+    GameStatus,
+    Genial,
+    LocalStorageKey,
+    PermanentAny,
+    Thunk,
+    ThunkExtraArguments,
+    Uuid4
+} from "./types"
 
 import { GenialUiConnected } from "./GenialUi";
 import { GENIAL_GLOBAL } from "./global";
@@ -27,16 +38,44 @@ export function setGenialState(state: DeepPartial<Genial>): Thunk {
     };
 }
 
+export function createEmptyGame(): Game {
+    return {
+        uuid: "",
+        players: [],
+        createdAt: "",
+        boardSize: 6,
+        playerCount: 2,
+        name: "",
+        drawableHexyPairs: [],
+        hexyPairs: [],
+        adminUuid: "",
+        authorId: "",
+        finished: false,
+        status: GameStatus.Lobby,
+        public: true,
+        showProgress: true,
+        progress: {},
+    }
+}
+
 export const initialGenialState: Genial = {
+    loadingState: "loading",
     eventSourceState: EventSourceState.CLOSED,
     menu: {
         open: false,
         entries: [],
         selectedEntryIndex: 0,
     },
-    games: [],
-    loadingState: "loading",
-    status: GameStatus.Lobby,
+    players: {},
+    player: {
+        hexyPairs: [undefined, undefined, undefined, undefined, undefined, undefined],
+        firstPlacedHexy: undefined,
+        name: "",
+        hoveredHexyCoords: undefined,
+        movesInTurn: 0,
+    },
+    game: createEmptyGame(),
+    lobbyGames: [],
     authenticated: false,
     playerUuid: getOrCreatePlayerUuidForUnauthenticatedPlayer(),
 };
@@ -66,7 +105,7 @@ export function onGameKeyDown(keyCode: number, initializeResult: InitializeResul
     return (dispatch, getState) => {
         const game = getState();
 
-        if (keyCode == 27) { // escape
+        if (keyCode === 27) { // escape
             game.menu.open = !game.menu.open;
         } else if (keyCode === 37) { // left
 
@@ -130,10 +169,8 @@ export async function initialize(): Promise<InitializeResult> {
 
     GENIAL_GLOBAL.store = store;
 
-    const games = [{}];
-
     fetchJson("http://localhost:8080/api/games", { method: "GET" }).then((games) => {
-        store.dispatch(setGenialState({ games: games, loadingState: games.length > 0 ? "loaded" : "noGames" }));
+        store.dispatch(setGenialState({ lobbyGames: games, loadingState: games.length > 0 ? "loaded" : "noGames" }));
     });
 
     const initializeResult = {
@@ -157,6 +194,7 @@ export async function initialize(): Promise<InitializeResult> {
         // TODO show browser unsupported popup
     }
 
+    console.log("new event source");
     const source = new EventSource(`http://localhost:8080/events/${getOrCreatePlayerUuidForUnauthenticatedPlayer()}`);
 
     source.addEventListener("message", (e) => {

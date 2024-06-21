@@ -4,29 +4,14 @@ import * as React from "react";
 import { connect } from "react-redux";
 
 import {
-    calulateProgressGained,
-    clamp,
-    createBoardHexyPair,
-    createHexy,
-    getColsByRow,
-    getXyCoordsByRowCol
+    calulateProgressGained, clamp, createBoardHexyPair, createHexy, getColsByRow, getXyCoordsByRowCol
 } from "../utils";
 import {
-    selectGameId,
-    selectHexyStyleByPoint, selectIsPointAllowedToReceiveHover,
-    selectPlayerSelectedHexyPair,
-    selectPlayerSelectedHexyPairHexyColor
+    selectHexyStyleByPoint, selectIsPointAllowedToReceiveHover, selectPlayerSelectedHexyPair, selectPlayerSelectedHexyPairHexyColor
 } from "../selectors";
 import { HexyComponent } from "./Hexy";
 import {
-    Genial,
-    PlayerHexyPair,
-    Point,
-    ProgressValue,
-    Thunk,
-    BoardHexyPair,
-    DeepPick,
-    BoardSize
+    Genial, PlayerHexyPair, Point, ProgressValue, Thunk, BoardHexyPair, BoardSize, Game, Player
 } from "../types";
 import { setGenialState } from "../index";
 import { COLORS } from "../consts";
@@ -36,8 +21,8 @@ export interface BoardOwnProps {
 }
 
 export interface BoardStateProps {
-    game: Genial["game"];
-    player: Genial["player"];
+    game?: Game;
+    player: Player;
 }
 
 export interface BoardDispatchProps {
@@ -54,6 +39,10 @@ const VIEW_BOX_MAP = {
 };
 
 export function Board(props: BoardProps) {
+    if (!props.game) {
+        return null;
+    }
+
     return (
         <div className={"svg-container"}>
             <svg viewBox={VIEW_BOX_MAP[props.game.boardSize as BoardSize]} xmlns="http://www.w3.org/2000/svg">
@@ -108,7 +97,7 @@ export function Board(props: BoardProps) {
                         return (
                             <g key={index}>
                                 {hexyPair.map(hexy => {
-                                    const { x, y } = getXyCoordsByRowCol({ row: hexy.y, col: hexy.x, boardSize: props.game.boardSize });
+                                    const { x, y } = getXyCoordsByRowCol({ row: hexy.y, col: hexy.x, boardSize: props.game!.boardSize });
                                     return (
                                         <HexyComponent
                                             key={`${x}_${y}`}
@@ -135,9 +124,7 @@ export const BoardConnected = connect<any, any, any, any>(
     },
 )(Board);
 
-export type OnBoardHexyMouseEnterState = Genial;
-
-export function onBoardHexyMouseEnter(point: Point): Thunk<OnBoardHexyMouseEnterState> {
+export function onBoardHexyMouseEnter(point: Point): Thunk {
     return (dispatch, getState) => {
         dispatch(setGenialState(immer.produce(getState(), state => {
             if (selectIsPointAllowedToReceiveHover(state, point)) {
@@ -147,15 +134,17 @@ export function onBoardHexyMouseEnter(point: Point): Thunk<OnBoardHexyMouseEnter
     };
 }
 
-export type OnPreviewedBoardHexyClickState = Genial;
-
-export function onPreviewedBoardHexyClick(point: Point, preview: boolean): Thunk<OnPreviewedBoardHexyClickState> {
+export function onPreviewedBoardHexyClick(point: Point, preview: boolean): Thunk {
     return (dispatch, getState, { Api }) => {
         if (!preview) {
             return;
         }
 
         dispatch(setGenialState(immer.produce(getState(), state => {
+            if (!state.game) {
+                return state;
+            }
+
             const playerSelectedHexyPair = selectPlayerSelectedHexyPair(state);
 
             if (!playerSelectedHexyPair) {
@@ -172,11 +161,11 @@ export function onPreviewedBoardHexyClick(point: Point, preview: boolean): Thunk
                     state.player.firstPlacedHexy,
                     createHexy(point.x, point.y, selectPlayerSelectedHexyPairHexyColor(state)!)
                 );
-                const progressGained = calulateProgressGained(state, boardHexyPair);
+                const progressGained = calulateProgressGained(state.game, boardHexyPair);
                 const movesGained = COLORS.reduce((memo, color) => {
-                    const newProgress = clamp(0, state.player.progress[color] + progressGained[color], 18);
-                    const result = state.player.progress[color] !== 18 && newProgress === 18 ? memo + 1 : memo;
-                    state.player.progress[color] = newProgress as ProgressValue;
+                    const newProgress = clamp(0, state.game.progress[state.playerUuid][color] + progressGained[color], 18);
+                    const result = state.game.progress[state.playerUuid][color] !== 18 && newProgress === 18 ? memo + 1 : memo;
+                    state.game.progress[state.playerUuid][color] = newProgress as ProgressValue;
                     return result;
                 }, 0);
                 const movesRemaining = state.player.movesInTurn + movesGained - 1;
@@ -204,7 +193,7 @@ export function onPreviewedBoardHexyClick(point: Point, preview: boolean): Thunk
 
                 Api.placeHexyPairOnBoard({
                     playerId: 1,
-                    gameId: selectGameId(state),
+                    gameId: "some_id",
                     hexy: boardHexyPair,
                 });
             }
