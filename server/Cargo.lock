@@ -78,7 +78,7 @@ dependencies = [
  "flate2",
  "futures-core",
  "h2",
- "http 0.2.8",
+ "http",
  "httparse",
  "httpdate",
  "itoa 1.0.5",
@@ -111,7 +111,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d66ff4d247d2b160861fa2866457e85706833527840e4133f8f49aa423a38799"
 dependencies = [
  "bytestring",
- "http 0.2.8",
+ "http",
  "regex",
  "serde",
  "tracing",
@@ -190,7 +190,7 @@ dependencies = [
  "encoding_rs",
  "futures-core",
  "futures-util",
- "http 0.2.8",
+ "http",
  "itoa 1.0.5",
  "language-tags",
  "log",
@@ -241,7 +241,7 @@ dependencies = [
  "derive_more",
  "futures-core",
  "futures-util",
- "http 0.2.8",
+ "http",
  "impl-more",
  "itertools 0.10.5",
  "local-channel",
@@ -829,7 +829,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
- "tower-http",
  "uuid",
 ]
 
@@ -855,7 +854,7 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "futures-util",
- "http 0.2.8",
+ "http",
  "indexmap 1.9.2",
  "slab",
  "tokio",
@@ -948,40 +947,6 @@ dependencies = [
  "bytes",
  "fnv",
  "itoa 1.0.5",
-]
-
-[[package]]
-name = "http"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21b9ddb458710bc376481b842f5da65cdf31522de232c1ca8146abce2a358258"
-dependencies = [
- "bytes",
- "fnv",
- "itoa 1.0.5",
-]
-
-[[package]]
-name = "http-body"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1cac85db508abc24a2e48553ba12a996e87244a0395ce011e62b37158745d643"
-dependencies = [
- "bytes",
- "http 1.1.0",
-]
-
-[[package]]
-name = "http-body-util"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0475f8b2ac86659c21b64320d5d653f9efe42acd2a4e560073ec61a155a34f1d"
-dependencies = [
- "bytes",
- "futures-core",
- "http 1.1.0",
- "http-body",
- "pin-project-lite",
 ]
 
 [[package]]
@@ -2056,34 +2021,6 @@ dependencies = [
  "tokio",
  "tracing",
 ]
-
-[[package]]
-name = "tower-http"
-version = "0.5.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e9cd434a998747dd2c4276bc96ee2e0c7a2eadf3cae88e52be55a05fa9053f5"
-dependencies = [
- "bitflags 2.5.0",
- "bytes",
- "http 1.1.0",
- "http-body",
- "http-body-util",
- "pin-project-lite",
- "tower-layer",
- "tower-service",
-]
-
-[[package]]
-name = "tower-layer"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c20c8dbed6283a09604c3e69b4b7eeb54e298b8a600d4d5ecb5ad39de609f1d0"
-
-[[package]]
-name = "tower-service"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6bc1c9ce2b5135ac7f93c72918fc37feb872bdc6a5533a8b85eb4b86bfdae52"
 
 [[package]]
 name = "tracing"

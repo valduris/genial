@@ -13,7 +13,13 @@ export interface CreateGameFormOwnProps {
     visible: boolean;
 }
 
-export type CreateGameFormFormState = Pick<Game, "boardSize" | "playerCount" | "public" | "showProgress" | "name">;
+export interface CreateGameFormFormState {
+    board_size: Game["boardSize"];
+    player_count: Game["playerCount"];
+    public: Game["public"];
+    show_progress: Game["showProgress"];
+    name: Game["name"];
+}
 
 export interface CreateGameFormDispatchProps {
     onSubmit: (data: CreateGameFormFormState) => void;
@@ -32,10 +38,10 @@ export function getNextElementFromArray<T>(array: T[], current: T): T {
 
 export function CreateGameForm(props: CreateGameFormProps) {
     const [formState, setFormState] = React.useState<CreateGameFormFormState>({
-        boardSize: 6,
-        playerCount: 3,
+        board_size: 6,
+        player_count: 3,
         public: true,
-        showProgress: true,
+        show_progress: true,
         name: "",
     });
 
@@ -52,7 +58,7 @@ export function CreateGameForm(props: CreateGameFormProps) {
                         className="label"
                         onClick={() => setFormState({
                             ...formState,
-                            playerCount: getNextElementFromArray([2, 3, 4], formState.playerCount),
+                            player_count: getNextElementFromArray([2, 3, 4], formState.player_count),
                         })}
                     >
                         {translate("playerCount")}
@@ -65,10 +71,10 @@ export function CreateGameForm(props: CreateGameFormProps) {
                                 <button
                                     key={n}
                                     className={classNames("button", {
-                                        "is-info": formState.playerCount === n,
-                                        "is-selected": formState.playerCount === n,
+                                        "is-info": formState.player_count === n,
+                                        "is-selected": formState.player_count === n,
                                     })}
-                                    onClick={() => setValueInFormState({ playerCount: n as PlayerCount })
+                                    onClick={() => setValueInFormState({ player_count: n as PlayerCount })
                                 }>
                                     {n}
                                 </button>
@@ -83,7 +89,7 @@ export function CreateGameForm(props: CreateGameFormProps) {
                         className="label"
                         onClick={() => setFormState({
                             ...formState,
-                            boardSize: getNextElementFromArray([6, 7, 8], formState.boardSize),
+                            board_size: getNextElementFromArray([6, 7, 8], formState.board_size),
                         })}
                     >
                         {translate("boardSize")}
@@ -96,10 +102,10 @@ export function CreateGameForm(props: CreateGameFormProps) {
                                 <button
                                     key={n}
                                     className={classNames("button", {
-                                        "is-info": formState.boardSize === n,
-                                        "is-selected": formState.boardSize === n,
+                                        "is-info": formState.board_size === n,
+                                        "is-selected": formState.board_size === n,
                                     })}
-                                    onClick={() => setValueInFormState({ boardSize: n as BoardSize })}
+                                    onClick={() => setValueInFormState({ board_size: n as BoardSize })}
                                 >
                                     {n}
                                 </button>
@@ -135,7 +141,7 @@ export function CreateGameForm(props: CreateGameFormProps) {
                 <div className="field-label">
                     <label
                         className="label"
-                        onClick={() => setValueInFormState({ showProgress: !formState.showProgress })}
+                        onClick={() => setValueInFormState({ show_progress: !formState.show_progress })}
                     >
                         {translate("showProgress")}
                     </label>
@@ -146,8 +152,8 @@ export function CreateGameForm(props: CreateGameFormProps) {
                             <label className="radio">
                                 <input
                                     type="checkbox"
-                                    checked={formState.showProgress}
-                                    onChange={() => setValueInFormState({ showProgress: !formState.showProgress })}
+                                    checked={formState.show_progress}
+                                    onChange={() => setValueInFormState({ show_progress: !formState.show_progress })}
                                 />
                             </label>
                         </div>
@@ -193,7 +199,7 @@ export const CreateGameFormConnected = connect<any, any, any, any>(undefined, { 
 export function onCreateGameFormSubmit(data: CreateGameFormFormState): Thunk<Genial> {
     return async (dispatch, getState, { fetchJson }) => {
         const playerUuid = selectPlayerUuid(getState());
-        const body: any = { ...data, adminUuid: playerUuid };
+        const body: any = { ...data, admin_uuid: playerUuid };
         const result = await fetchJson("http://localhost:8080/api/game", { body: JSON.stringify(body) });
         console.log(result);
         dispatch(setGenialState(immer.produce(getState(), state => {

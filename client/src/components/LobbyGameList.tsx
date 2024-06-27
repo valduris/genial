@@ -1,6 +1,7 @@
 import * as React from "react";
 import { connect } from "react-redux";
 import * as immer from "immer";
+import { Table } from '@mantine/core';
 
 import { translate } from "../utils";
 import { GamesLoadingState, GameStatus, Genial, LobbyGames, PlayerCount, Thunk, Uuid4 } from "../types";
@@ -21,34 +22,37 @@ export interface LobbyGameListDispatchProps {
 export type LobbyGameListProps = LobbyGameListStateProps & LobbyGameListDispatchProps;
 
 export function LobbyGameList(props: LobbyGameListProps) {
+    console.log("props", props, props.loadingState);
     return (
-        <table className={"table"}>
-            <thead>
-                <tr>
-                    <th>{translate("boardSize")}</th>
-                    <th>{translate("playerCount")}</th>
-                    <th>{translate("gameName")}</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
+        <Table striped highlightOnHover withTableBorder withColumnBorders>
+            <Table.Thead>
+                <Table.Tr>
+                    <Table.Th>{translate("boardSize")}</Table.Th>
+                    <Table.Th>{translate("playerCount")}</Table.Th>
+                    <Table.Th>{translate("gameName")}</Table.Th>
+                    <Table.Th>{translate("players")}</Table.Th>
+                    <Table.Th></Table.Th>
+                </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
                 {props.loadingState === "loading" && (
-                    <tr>
+                    <Table.Tr>
                         <td className={"loading"}>{translate("loading")}</td>
-                    </tr>
+                    </Table.Tr>
                 )}
                 {props.loadingState === "noGames" && (
-                    <tr>
+                    <Table.Tr>
                         <td className={"noGames"}>{translate("noGames")}</td>
-                    </tr>
+                    </Table.Tr>
                 )}
                 {props.loadingState === "loaded" && props.games.map(game => {
                     return (
-                        <tr key={game.uuid}>
-                            <td>{game.boardSize}</td>
-                            <td>{`${game.players.length} / ${game.playerCount}`}</td>
-                            <td>{game.name}</td>
-                            <td>
+                        <Table.Tr key={game.uuid}>
+                            <Table.Td>{game.boardSize}</Table.Td>
+                            <Table.Td>{`${game.players.length} / ${game.playerCount}`}</Table.Td>
+                            <Table.Td>{game.name}</Table.Td>
+                            <Table.Td>{game.players.join(", ")}</Table.Td>
+                            <Table.Td>
                                 <button
                                     onClick={() => props.onJoinGame(game.uuid)}
                                     data-role={"game_list_join"}
@@ -56,17 +60,18 @@ export function LobbyGameList(props: LobbyGameListProps) {
                                 >
                                     {translate("joinGame")}
                                 </button>
-                            </td>
-                        </tr>
+                            </Table.Td>
+                        </Table.Tr>
                     );
                 })}
-            </tbody>
-        </table>
+            </Table.Tbody>
+        </Table>
     );
 }
 
 export const LobbyGameListConnected = connect<any, any, any, any>((state: Genial) => ({
     games: state.lobbyGames,
+    loadingState: state.loadingState,
 }), { onJoinGame: onJoinGame })(LobbyGameList);
 
 export function onJoinGame(gameUuid: Uuid4): Thunk<Genial> {

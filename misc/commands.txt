@@ -7,4 +7,5 @@ cargo watch -c -w src -x run
 
 # PSQL
 psql -c 'select * from test;'
+psql -f schema.sql -d genial
 

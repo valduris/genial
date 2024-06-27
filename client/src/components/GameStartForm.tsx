@@ -43,28 +43,8 @@ export function CreateGameForm(props: CreateGameFormProps) {
         setFormState(prevState => ({ ...prevState, ...value }));
     }, [setFormState]);
 
-    return (        <div className={"gameStartContainer"}>
-        <Grid>
-            <Grid.Col span={5}>
-                <Checkbox
-                    defaultChecked
-                    label="I agree to sell my privacy"
-                />
-                <Fieldset legend="Personal information">
-                    <TextInput label="Your name" placeholder="Your name" />
-                    <TextInput label="Email" placeholder="Email" mt="md" />
-                </Fieldset>
-                <Button.Group>
-                    <Button variant="default">First</Button>
-                    <Button variant="default">Second</Button>
-                    <Button variant="default">Third</Button>
-                </Button.Group>
-            </Grid.Col>
-            <Grid.Col span={7}>
-            </Grid.Col>
-        </Grid>
-
-
+    return (
+        <div className={"gameStartContainer"}>
             <h1>{translate("gameStart")}</h1>
             <div className="field is-horizontal">
                 <div className="field-label is-normal">

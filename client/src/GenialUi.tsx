@@ -13,6 +13,7 @@ import { Navigation } from "./components/navigation/Navigation";
 import { GameStartFormConnected } from "./components/GameStartForm";
 
 import '@mantine/core/styles.css';
+import { PlayerRegistrationFormConnected } from "./components/PlayerRegistrationForm";
 
 export interface GenialUiStateProps {
     game: Genial["game"];
@@ -26,11 +27,11 @@ export function GenialUi(props: GenialUiStateProps) {
             <div className="genial">
                 <Navigation />
                 <hr />
-                {!props.game && (
+                {/*{!props.game && (*/}
                     <>
                         <div className="columns">
                             <div className="column is-4">
-                                {!props.game && <CreateGameFormConnected />}
+                                {<CreateGameFormConnected />}
                             </div>
                             <div className="column is-8">
                                 <LobbyGameListConnected />
@@ -38,7 +39,7 @@ export function GenialUi(props: GenialUiStateProps) {
                             </div>
                         </div>
                     </>
-                )}
+                {/*)}*/}
                 <GameStartFormConnected />
                 {props.game && props.game.status === GameStatus.InProgress && (
                     <>
@@ -47,6 +48,7 @@ export function GenialUi(props: GenialUiStateProps) {
                         <ProgressBarsConnected />
                     </>
                 )}
+                <PlayerRegistrationFormConnected />
             </div>
         </MantineProvider>
     );

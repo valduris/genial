@@ -9,104 +9,77 @@ use std::sync::Arc;
 use std::env;
 use actix_cors::Cors;
 use sqlx::postgres::{PgPoolOptions};
-use sqlx::{FromRow, Pool, Postgres};
+use sqlx::{FromRow, Pool, Postgres, Row};
 use serde_json::json;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
-#[derive(Deserialize, Debug)]
-pub struct FilterOptions {
-    pub page: Option<usize>,
-    pub limit: Option<usize>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct ParamOptions {
-    pub id: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct CreateGameSchema {
-    pub name: String,
-    pub boardSize: i32,
-    pub playerCount: i32,
-    pub public: bool,
-    pub showProgress: bool,
-}
 
 pub struct AppState {
     broadcaster: Arc<Broadcaster>,
     postgres_pool: Pool<Postgres>,
 }
 
-pub async fn sse_connect_client(
-    state: web::Data<AppState>,
-    Path((uuid,)): Path<(String,)>,
-) -> impl Responder {
+// 'created',
+// 'started',
+// 'finished',
+// 'cancelled'
+
+pub async fn sse_connect_client(state: web::Data<AppState>, Path((_uuid,)): Path<(String,)>) -> impl Responder {
     state.broadcaster.new_client().await;
+    // state.postgres_pool.broadcast(&msg).await;
     HttpResponse::Ok()
         .insert_header(("Content-Type", "text/event-stream"))
         .insert_header(("Cache-Control", "no-cache"))
         .body("data")
 }
 
-#[derive(Deserialize, sqlx::FromRow)]
-pub struct ApiGetGames {
+// #[serde(rename = "updatedAt")]
+// pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
+#[derive(sqlx::FromRow, Debug, Serialize)]
+struct ApiGame {
+    uuid: String,
     name: String,
-    // board_size: i32,
-    // player_count: i32,
-    // public: bool,
-    // show_progress: bool,
-}
-
-#[derive(sqlx::FromRow, Debug)] // sqlx::postgres::PgRow
-struct SomeId {
-    id: i32,
+    boardSize: i32,
+    playerCount: i32,
+    showProgress: bool,
+    status: String,
+    players: Vec<String>,
 }
 
 pub async fn api_get_games(state: web::Data<AppState>) -> impl Responder {
-    let row = sqlx::query_as::<_, SomeId>("select * from game")
-        .fetch_all(&state.postgres_pool)
-        .await
-        .unwrap();
-    // let one: i32 = row.get("id").unwrap();
-    println!("{:?}", row);
-    HttpResponse::Ok().body("{\"games\": \"here\"}")
-    // let mut conn = state.postgres_pool.acquire().await.expect("Could not acquire connection pool #2");
-    // let mut games = sqlx::query_as::<_, ApiGetGames>(r#"SELECT name FROM game;"#).fetch_all(&state.postgres_pool);
-    // games.for_each(|game| println!("{:#?}", game));
-    // state.postgres_pool.broadcast(&msg).await;
+    let query = r#"
+        select
+            g.name, g.uuid, g.board_size as "boardSize", g.player_count as "playerCount", g.status,
+            g.show_progress as "showProgress", array_remove(array_agg(p.name), NULL) as players
+        from game g
+        left join player p on g.uuid = p.game_uuid
+        group by g.id;
+    "#;
+    let rows: Vec<ApiGame> = sqlx::query_as(query).fetch_all(&state.postgres_pool).await.unwrap();
+    // println!("{}", json!(rows));
+    return HttpResponse::Ok().json(json!(rows));
 }
 
-// #[derive(Debug, FromRow, Deserialize, Serialize)]
-// #[allow(non_snake_case)]
-// pub struct GameModel {
-//     pub name: String,
-//     pub public: bool,
-//     pub showProgress: bool,
-//     pub boardSize: i8,
-//     pub playerCount: i8,
-//     // #[serde(rename = "createdAt")]
-//     // pub created_at: Option<chrono::DateTime<chrono::Utc>>,
-//     // #[serde(rename = "updatedAt")]
-//     // pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
-// }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CreateGameSchema {
+    pub name: String,
+    pub board_size: i32,
+    pub player_count: i32,
+    pub public: bool,
+    pub show_progress: bool,
+}
 
-async fn api_game_create(
-    body: web::Json<CreateGameSchema>,
-    data: web::Data<AppState>,
-) -> impl Responder {
-    // Result<(String, String, i8, i8, bool, bool),_>
+async fn api_game_create(body: web::Json<CreateGameSchema>, data: web::Data<AppState>) -> impl Responder {
     let uuid = Uuid::new_v4();
     let query_result  = sqlx::query(
-        r#"INSERT INTO game (uuid, name, "boardSize", "playerCount", public, "showProgress") VALUES ($1, $2, $3, $4, $5, $6)"#,
+        r#"INSERT INTO game (uuid, name, board_size, player_count, public, show_progress) VALUES ($1, $2, $3, $4, $5, $6)"#,
     )
         .bind(uuid)
         .bind(body.name.to_string())
-        .bind(body.boardSize.clone())
-        .bind(body.playerCount)
+        .bind(body.board_size.clone())
+        .bind(body.player_count)
         .bind(body.public)
-        .bind(body.showProgress)
+        .bind(body.show_progress)
         .execute(&data.postgres_pool)
         .await;
 
@@ -117,12 +90,63 @@ async fn api_game_create(
             return HttpResponse::Ok().json(serde_json::json!({"status": "success","data": serde_json::json!({
                 "note": "game",
                 "name": body.name,
-                "boardSize": body.boardSize,
-                "playerCount": body.playerCount,
+                "boardSize": body.board_size,
+                "playerCount": body.player_count,
                 "public": body.public,
                 "uuid": uuid,
-                "showProgress": body.showProgress
+                "showProgress": body.show_progress
             })}));
+        }
+        Err(e) => {
+            return HttpResponse::InternalServerError().json(serde_json::json!({"status": "error","message": format!("{:?}", e)}));
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ApiPlayerRegisterSchema {
+    pub name: String,
+    pub email: String,
+    pub password: String,
+}
+
+async fn api_player_register(body: web::Json<ApiPlayerRegisterSchema>, data: web::Data<AppState>) -> impl Responder {
+    let uuid = Uuid::new_v4();
+    let query = r#"INSERT INTO player (uuid, name, email, password) VALUES ($1, $2, $3, $4)"#;
+    let result  = sqlx::query(query)
+        .bind(uuid).bind(body.name.clone()).bind(body.email.clone()).bind(body.password.clone())
+        .execute(&data.postgres_pool)
+        .await;
+
+    match result {
+        Ok(_) => {
+            return HttpResponse::Ok().json(serde_json::json!({ "status": "success" }));
+        }
+        Err(e) => {
+            return HttpResponse::InternalServerError().json(serde_json::json!({"status": "error","message": format!("{:?}", e)}));
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GameJoinSchema {
+    pub gameUuid: String,
+    pub playerUuid: String,
+}
+
+async fn api_game_join(body: web::Json<GameJoinSchema>, data: web::Data<AppState>) -> impl Responder {
+    println!("{}", body.playerUuid.clone());
+    let query_result  = sqlx::query(r#"UPDATE player SET game_uuid = $1 WHERE uuid = $2"#)
+        .bind(body.gameUuid.clone())
+        .bind(body.playerUuid.clone())
+        .execute(&data.postgres_pool)
+        .await;
+
+    data.broadcaster.broadcast("{\"type\": \"player_joined_game\"}");
+
+    match query_result {
+        Ok(_) => {
+            return HttpResponse::Ok().json(serde_json::json!({ "status": "success" }));
         }
         Err(e) => {
             return HttpResponse::InternalServerError().json(serde_json::json!({"status": "error","message": format!("{:?}", e)}));
@@ -163,6 +187,8 @@ async fn main() -> std::io::Result<()> {
             .route("/events/{uuid}", web::get().to(sse_connect_client))
             .route("/api/games", web::get().to(api_get_games))
             .route("/api/game", web::post().to(api_game_create))
+            .route("/api/game/join", web::post().to(api_game_join))
+            .route("/api/player/register", web::post().to(api_player_register))
     })
     .bind(format!("{}:{}", "127.0.0.1", "8080"))?
     .run()
