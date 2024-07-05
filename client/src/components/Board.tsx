@@ -163,9 +163,9 @@ export function onPreviewedBoardHexyClick(point: Point, preview: boolean): Thunk
                 );
                 const progressGained = calulateProgressGained(state.game, boardHexyPair);
                 const movesGained = COLORS.reduce((memo, color) => {
-                    const newProgress = clamp(0, state.game.progress[state.playerUuid][color] + progressGained[color], 18);
-                    const result = state.game.progress[state.playerUuid][color] !== 18 && newProgress === 18 ? memo + 1 : memo;
-                    state.game.progress[state.playerUuid][color] = newProgress as ProgressValue;
+                    const newProgress = clamp(0, state.game!.progress[state.playerUuid][color] + progressGained[color], 18);
+                    const result = state.game!.progress[state.playerUuid][color] !== 18 && newProgress === 18 ? memo + 1 : memo;
+                    state.game!.progress[state.playerUuid][color] = newProgress as ProgressValue;
                     return result;
                 }, 0);
                 const movesRemaining = state.player.movesInTurn + movesGained - 1;

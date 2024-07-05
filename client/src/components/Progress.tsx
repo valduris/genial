@@ -48,6 +48,6 @@ export function ProgressBars(props: ProgressProps) {
 
 // MapStateToPropsParam<GenialProps, GenialUiOwnProps, any>
 export const ProgressBarsConnected = connect<any, any, any, any>(
-    (state: Genial) => ({ progress: state.game.progress[state.playerUuid] }),
+    (state: Genial) => ({ progress: state.game?.progress[state.playerUuid] }),
     { onPlayerHexyPairClick: onPlayerHexyPairClick },
 )(ProgressBars);

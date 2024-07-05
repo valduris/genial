@@ -24,12 +24,16 @@ pub struct AppState {
 // 'finished',
 // 'cancelled'
 
-pub async fn sse_connect_client(state: web::Data<AppState>, Path((_uuid,)): Path<(String,)>) -> impl Responder {
+pub async fn sse_connect_client(state: web::Data<AppState>, Path((uuid,)): Path<(String,)>) -> impl Responder {
     state.broadcaster.new_client().await;
     // state.postgres_pool.broadcast(&msg).await;
+    // let res = format!("dataq2 {}", _uuid.as_str());
+    // let res2 = format!("hello {}", "world!").to_string();
+    println!("{}", uuid);
     HttpResponse::Ok()
         .insert_header(("Content-Type", "text/event-stream"))
         .insert_header(("Cache-Control", "no-cache"))
+        .insert_header(("Connection", "keep-alive"))
         .body("data")
 }
 
@@ -60,13 +64,54 @@ pub async fn api_get_games(state: web::Data<AppState>) -> impl Responder {
     return HttpResponse::Ok().json(json!(rows));
 }
 
+#[derive(sqlx::FromRow, Debug, Serialize)]
+struct ApiLobbyGame {
+    uuid: String,
+    name: String,
+    boardSize: i32,
+    playerCount: i32,
+    showProgress: bool,
+    status: String,
+    players: Vec<ApiLobbyGamePlayer>,
+}
+
+#[derive(sqlx::FromRow, Debug, Serialize)]
+struct ApiLobbyGamePlayer {
+    name: String,
+    id: i32,
+    ready: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ApiLobbyGameSchema {
+    pub gameUuid: String,
+}
+
+pub async fn api_get_lobby_game(body: web::Json<ApiLobbyGameSchema>, state: web::Data<AppState>) -> impl Responder {
+    let query = r#"
+        select json_object_agg(uuid, players) game
+        from (
+            select g.uuid, json_build_object('ready', p.ready, 'uuid', p.uuid, 'name', p.name) players
+            from game g
+            join player p on g.uuid = p.game_uuid
+            where g.uuid = $1
+            group by g.uuid, p.ready, p.uuid, p.name
+        ) players;
+    "#;
+    let rows: Vec<ApiGame> = sqlx::query_as(query).bind(body.gameUuid.clone()).fetch_all(&state.postgres_pool).await.unwrap();
+    let message = json!(rows);
+    // println!("{}", json!(rows));
+    state.broadcaster.broadcast(message.as_str().unwrap()).await;
+    return HttpResponse::Ok().json(message);
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CreateGameSchema {
     pub name: String,
-    pub board_size: i32,
-    pub player_count: i32,
+    pub boardSize: i32,
+    pub playerCount: i32,
     pub public: bool,
-    pub show_progress: bool,
+    pub showProgress: bool,
 }
 
 async fn api_game_create(body: web::Json<CreateGameSchema>, data: web::Data<AppState>) -> impl Responder {
@@ -76,25 +121,25 @@ async fn api_game_create(body: web::Json<CreateGameSchema>, data: web::Data<AppS
     )
         .bind(uuid)
         .bind(body.name.to_string())
-        .bind(body.board_size.clone())
-        .bind(body.player_count)
+        .bind(body.boardSize.clone())
+        .bind(body.playerCount)
         .bind(body.public)
-        .bind(body.show_progress)
+        .bind(body.showProgress)
         .execute(&data.postgres_pool)
         .await;
 
-    data.broadcaster.broadcast("{\"type\": \"game_created\"}");
+    data.broadcaster.broadcast("{\"type\": \"game_created\"}").await;
 
     match query_result {
         Ok(_) => {
             return HttpResponse::Ok().json(serde_json::json!({"status": "success","data": serde_json::json!({
                 "note": "game",
                 "name": body.name,
-                "boardSize": body.board_size,
-                "playerCount": body.player_count,
+                "boardSize": body.boardSize,
+                "playerCount": body.playerCount,
                 "public": body.public,
                 "uuid": uuid,
-                "showProgress": body.show_progress
+                "showProgress": body.showProgress
             })}));
         }
         Err(e) => {
@@ -142,7 +187,31 @@ async fn api_game_join(body: web::Json<GameJoinSchema>, data: web::Data<AppState
         .execute(&data.postgres_pool)
         .await;
 
-    data.broadcaster.broadcast("{\"type\": \"player_joined_game\"}");
+    data.broadcaster.broadcast("{\"type\": \"player_joined_game\"}").await;
+
+    match query_result {
+        Ok(_) => {
+            return HttpResponse::Ok().json(serde_json::json!({ "status": "success" }));
+        }
+        Err(e) => {
+            return HttpResponse::InternalServerError().json(serde_json::json!({"status": "error","message": format!("{:?}", e)}));
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GameLeaveSchema {
+    pub playerUuid: String,
+}
+
+async fn api_game_leave(body: web::Json<GameLeaveSchema>, data: web::Data<AppState>) -> impl Responder {
+    println!("{}", body.playerUuid.clone());
+    let query_result  = sqlx::query(r#"UPDATE player SET game_uuid = NULL WHERE uuid = $1"#)
+        .bind(body.playerUuid.clone())
+        .execute(&data.postgres_pool)
+        .await;
+
+    data.broadcaster.broadcast("{\"type\": \"player_left_game\"}").await;
 
     match query_result {
         Ok(_) => {
@@ -188,6 +257,8 @@ async fn main() -> std::io::Result<()> {
             .route("/api/games", web::get().to(api_get_games))
             .route("/api/game", web::post().to(api_game_create))
             .route("/api/game/join", web::post().to(api_game_join))
+            .route("/api/game/leave", web::post().to(api_game_leave))
+            .route("/api/lobby_game", web::post().to(api_get_lobby_game))
             .route("/api/player/register", web::post().to(api_player_register))
     })
     .bind(format!("{}:{}", "127.0.0.1", "8080"))?

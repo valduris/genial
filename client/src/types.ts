@@ -84,12 +84,11 @@ export type SpecialCorners = [BoardHexy, BoardHexy, BoardHexy, BoardHexy, BoardH
 
 export interface LobbyGame {
     uuid: Uuid4;
-    players: [{
-        name: string;
-    }];
+    players: string[];
     name: string;
     boardSize: BoardSize;
     playerCount: 2 | 3 | 4;
+    showProgress: boolean;
 }
 
 export type LobbyGames = LobbyGame[];
@@ -102,10 +101,11 @@ export interface Game {
     boardSize: BoardSize;
     createdAt: string;
     finished: false;
-    players: Array<{
-        id: number;
+    players: Record<Uuid4, {
+        uuid: Uuid4;
         name: string;
         progress?: Progress;
+        ready: boolean;
     }>;
     drawableHexyPairs: DrawableHexyPairs;
     hexyPairs: BoardHexyPairs;
@@ -136,7 +136,7 @@ export interface Genial {
         selectedEntryIndex: number;
     },
     gameUuid?: string;
-    game: Game;
+    game?: Game;
     player: Player;
     players: Record<Uuid4, Player>;
 }

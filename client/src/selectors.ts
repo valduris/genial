@@ -101,6 +101,10 @@ export type SelectIsPointAllowedToReceiveHoverState = FirstParam<[typeof selectF
     & Pick<Genial, "game">;
 
 export function selectIsPointAllowedToReceiveHover(state: SelectIsPointAllowedToReceiveHoverState, point: Point): boolean {
+    if (state.game) {
+        return false;
+    }
+
     const firstPlacedHexy = selectFirstPlacedHexy(state);
     const pointIsSpecialCorner = isPointSpecialCorner(point);
     const playerSelectedHexyPair = selectPlayerSelectedHexyPair(state);
@@ -120,7 +124,7 @@ export function selectIsPointAllowedToReceiveHover(state: SelectIsPointAllowedTo
             );
     }
 
-    const neighboringPoints = getNeighboringHexysOf(point, state.game).filter(hexyOrPoint => {
+    const neighboringPoints = getNeighboringHexysOf(point, state.game!).filter(hexyOrPoint => {
         return !selectIsPointCoveredWithHexy(state, hexyOrPoint);
     });
 
@@ -136,7 +140,7 @@ export function selectIsPointAllowedToReceiveHover(state: SelectIsPointAllowedTo
 }
 
 export function selectIsPointCoveredWithHexy(state: Pick<Genial, "game">, point: Point): boolean {
-    return state.game.hexyPairs.some(hexyPair => {
+    return !!state.game && state.game.hexyPairs.some(hexyPair => {
         return hexyPair.some(hexy => hexy.x === point.x && hexy.y === point.y);
     });
 }

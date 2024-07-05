@@ -2,11 +2,13 @@ import * as React from "react";
 import * as immer from "immer";
 import { connect } from "react-redux";
 
-import { mapTimes, translate } from "../../utils";
-import { Game, GameStatus, Genial, LobbyGames, Thunk, Uuid4 } from "../../types";
+import { debugAssert, mapTimes, translate } from "../../utils";
+import { Game, Genial, LobbyGames, PlayerCount, Thunk, Uuid4 } from "../../types";
 import { setGenialState } from "../../index";
 import { selectPlayerUuid } from "../../selectors";
 import { fetchJson } from "../../api";
+import { Button, Checkbox, Container, Fieldset, InputWrapper, Table, TextInput, Grid } from "@mantine/core";
+import { MAX_PLAYER_COUNT } from "../../consts";
 
 export interface LobbyGameStateProps {
     games: LobbyGames;
@@ -16,9 +18,8 @@ export interface LobbyGameStateProps {
 }
 
 export interface LobbyGameDispatchProps {
-    onReadyChange: (gameUuid: Uuid4) => void;
-    onStartGame: (gameUuid: Uuid4) => void;
-    onLeaveGame: (gameUuid: Uuid4) => void;
+    onLeaveGame: () => void;
+    onReadyChange: () => void;
 }
 
 export type LobbyGameProps = LobbyGameStateProps & LobbyGameDispatchProps;
@@ -29,112 +30,110 @@ export function LobbyGame(props: LobbyGameProps) {
     }
 
     return (
-        <div className={"section"}>
-            <table className={"table"}>
-                <thead>
-                    <tr>
-                        <td>{translate("boardSize")}</td>
-                        <td>{translate("playerCount")}</td>
-                        <td>{translate("public")}</td>
-                        <td>{translate("showProgress")}</td>
-                        <td>{translate("gameName")}</td>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>{props.game.boardSize}</td>
-                        <td>{props.game.playerCount}</td>
-                        <td><input type={"checkbox"} readOnly checked={props.game.public} /></td>
-                        <td><input type={"checkbox"} readOnly checked={props.game.showProgress} /></td>
-                        <td>{props.game.name}</td>
-                    </tr>
-                </tbody>
-            </table>
-            <h2>{translate("players")}</h2>
-            <table className={"table"}>
-                <thead>
-                    <tr>
-                        <td>{translate("name")}</td>
-                    </tr>
-                </thead>
-                <tbody>
-                    {mapTimes(props.game.playerCount, (i => {
-                        const player = props.game.players[i];
-                        return (
-                            <tr key={i}>
-                                <td>{player ? player.name : translate("waitingForPlayerToJoin")}</td>
-                            </tr>
-                        );
-                    }))}
-                </tbody>
-            </table>
-            <input
-                className={"button is-primary"}
-                type={"submit"}
-                onSubmit={() => props.onStartGame(props.game.uuid)}
-                value={translate("startGame")}
-                disabled={(
-                    props.game.players.length !== props.game.playerCount
-                    ||
-                    props.game.adminUuid !== props.playerUuid
-                )}
-            />
-            <input
-                className={"button"}
-                type={"submit"}
-                onSubmit={() => props.onLeaveGame(props.game.uuid)}
-                value={translate("leaveGame")}
-            />
-        </div>
+        <Container>
+            <Grid>
+                <Grid.Col span={6}>
+                    <Fieldset>
+                        <TextInput label={translate("gameName")} value={props.game.name} disabled />
+                        <InputWrapper label={translate("boardSize")}>
+                            <Button.Group>
+                                {[6, 7, 8].map(n => {
+                                    return (
+                                        <Button key={`board_size_${n}`}>
+                                            {n}
+                                        </Button>
+                                    );
+                                })}
+                            </Button.Group>
+                        </InputWrapper>
+                        <InputWrapper label={translate("playerCount")}>
+                            <Button.Group>
+                                {[2, 3, 4].map(n => {
+                                    return (
+                                        <Button key={`player_count_${n}`}>
+                                            {n}
+                                        </Button>
+                                    );
+                                })}
+                            </Button.Group>
+                        </InputWrapper>
+                        <InputWrapper
+                            label={translate("showProgress")}
+                            description={translate("showProgressDescription")}
+                        >
+                            <Checkbox defaultChecked onChange={(e) => {}}/>
+                        </InputWrapper>
+                    </Fieldset>
+                </Grid.Col>
+                <Grid.Col span={6}>
+                    <h2>{translate("players")}</h2>
+                    <Table striped highlightOnHover withTableBorder withColumnBorders>
+                        <Table.Thead>
+                            <Table.Tr>
+                                <Table.Th>{translate("player")}</Table.Th>
+                                <Table.Th>{translate("ready?")}</Table.Th>
+                            </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                            {mapTimes(MAX_PLAYER_COUNT, (i => {
+                                const player = props.game.players[i];
+                                console.log("player", player);
+                                const content: string = player
+                                    ? player.name
+                                    : props.game.playerCount >= i
+                                        ? translate("waitingForPlayerToJoin")
+                                        : translate("openSlot");
+                                // props.game.adminUuid !== props.playerUuid
+
+                                return (
+                                    <Table.Tr key={i}>
+                                        <Table.Td>{content}</Table.Td>
+                                        <Table.Td>
+                                            {/*<InputWrapper>*/}
+                                            {player && <Checkbox onChange={props.onReadyChange} checked={player.ready} />}
+                                            {/*</InputWrapper>*/}
+                                        </Table.Td>
+                                    </Table.Tr>
+                                );
+                            }))}
+                        </Table.Tbody>
+                    </Table>
+                    <Button onClick={props.onLeaveGame} mt="md">{translate("leaveGame")}</Button>
+                </Grid.Col>
+            </Grid>
+        </Container>
     );
 }
 
 export const LobbyGameConnected = connect<any, any, any, any>((state: Genial) => ({
-    games: state.lobbyGames,
+    game: state.game,
     playerUuid: selectPlayerUuid(state),
     adminUuid: selectPlayerUuid(state),
-}), { onStartGame: onStartGame, onLeaveGame: onLeaveGame })(LobbyGame);
+}), { onLeaveGame: onLeaveGame, onReadyChange: onReadyChange })(LobbyGame);
 
-export function onLeaveGame(gameUuid: Uuid4): Thunk<Genial> {
+export function onReadyChange(): Thunk {
+    return async (dispatch, getState) => {
+        const state = getState();
+
+        if (!state.game) {
+            return debugAssert("state.game not defined");
+        }
+
+        const ready = !state.game.players[state.playerUuid].ready;
+        const body = { playerUuid: selectPlayerUuid(getState()), ready: ready };
+        const result = await fetchJson("http://localhost:8080/api/game/ready", { body: JSON.stringify(body) });
+    }
+}
+
+export function onLeaveGame(): Thunk {
     return async (dispatch, getState) => {
         const state = getState();
         const result = await fetchJson("http://localhost:8080/api/game/leave", {
-            body: JSON.stringify({
-                playerUuid: selectPlayerUuid(state),
-                gameId: state.game?.uuid,
-            }),
+            body: JSON.stringify({ playerUuid: selectPlayerUuid(state) }),
         });
         dispatch(setGenialState(immer.produce(state, state => {
-            state.game = {
-                ...result,
-                finished: false,
-                status: GameStatus.Lobby,
-            };
+            state.game = undefined;
+            state.gameUuid = undefined;
         })));
-    };
-}
-
-export function onStartGame(gameUuid: Uuid4): Thunk {
-    return async (dispatch, getState) => {
-        const playerUuid = selectPlayerUuid(getState());
-        const body = { adminUuid: playerUuid };
-        const result = await fetchJson("http://localhost:8080/api/game", { body: JSON.stringify(body) });
-        console.log(result);
-        dispatch(setGenialState(immer.produce(getState(), state => {
-            state.game = {
-                ...result,
-                finished: false,
-                status: GameStatus.Lobby,
-            };
-        })));
-        console.log("onCreateGameFormSubmit", getState());
-
-
-        // const result = await Api.joinGame({
-        //     gameUuid: gameUuid,
-        //     playerUuid: selectPlayerUuid(getState()),
-        // });
-        dispatch(setGenialState({}));
-        // log.info(result);
     };
 }

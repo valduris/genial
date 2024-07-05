@@ -1,11 +1,11 @@
 import { connect } from "react-redux";
 import * as immer from "immer";
-import classNames from "classnames";
 import * as React from "react";
+import { useForm } from "@mantine/form";
+import { Button, Fieldset, TextInput, InputWrapper, Checkbox, Container } from "@mantine/core";
 
 import { translate } from "../utils";
 import { BoardSize, Game, GameStatus, Genial, PlayerCount, Thunk } from "../types";
-
 import { setGenialState } from "../index";
 import { selectPlayerUuid } from "../selectors";
 
@@ -14,10 +14,9 @@ export interface CreateGameFormOwnProps {
 }
 
 export interface CreateGameFormFormState {
-    board_size: Game["boardSize"];
-    player_count: Game["playerCount"];
-    public: Game["public"];
-    show_progress: Game["showProgress"];
+    boardSize: Game["boardSize"];
+    playerCount: Game["playerCount"];
+    showProgress: Game["showProgress"];
     name: Game["name"];
 }
 
@@ -27,170 +26,64 @@ export interface CreateGameFormDispatchProps {
 
 export type CreateGameFormProps = CreateGameFormOwnProps & CreateGameFormDispatchProps;
 
-/**
- * it wraps
- */
-export function getNextElementFromArray<T>(array: T[], current: T): T {
-    const currentIndex = array.indexOf(current);
-    const index = (currentIndex + 1) === array.length ? 0 : currentIndex + 1;
-    return array[index];
-}
-
 export function CreateGameForm(props: CreateGameFormProps) {
-    const [formState, setFormState] = React.useState<CreateGameFormFormState>({
-        board_size: 6,
-        player_count: 3,
-        public: true,
-        show_progress: true,
-        name: "",
+    const form = useForm({
+        mode: "uncontrolled",
+        initialValues: {
+            name: "",
+            boardSize: 6 as BoardSize,
+            playerCount: 2 as PlayerCount,
+            showProgress: true,
+        },
     });
 
-    const setValueInFormState = React.useCallback((value: Partial<CreateGameFormFormState>) => {
-        setFormState(prevState => ({ ...prevState, ...value }));
-    }, [setFormState]);
-
     return (
-        <div className={"createGameContainer"}>
-            <h1>{translate("createGame")}</h1>
-            <div className="field is-horizontal">
-                <div className="field-label is-normal">
-                    <label
-                        className="label"
-                        onClick={() => setFormState({
-                            ...formState,
-                            player_count: getNextElementFromArray([2, 3, 4], formState.player_count),
-                        })}
-                    >
-                        {translate("playerCount")}
-                    </label>
-                </div>
-                <div className="field-body">
-                    <div className="buttons has-addons">
-                        {[2, 3, 4].map(n => {
-                            return (
-                                <button
-                                    key={n}
-                                    className={classNames("button", {
-                                        "is-info": formState.player_count === n,
-                                        "is-selected": formState.player_count === n,
-                                    })}
-                                    onClick={() => setValueInFormState({ player_count: n as PlayerCount })
-                                }>
-                                    {n}
-                                </button>
-                            )
-                        })}
-                    </div>
-                </div>
-            </div>
-            <div className="field is-horizontal">
-                <div className="field-label is-normal">
-                    <label
-                        className="label"
-                        onClick={() => setFormState({
-                            ...formState,
-                            board_size: getNextElementFromArray([6, 7, 8], formState.board_size),
-                        })}
-                    >
-                        {translate("boardSize")}
-                    </label>
-                </div>
-                <div className="field-body">
-                    <div className="buttons has-addons">
+        <Container>
+            <Fieldset legend={translate("createGame")}>
+                <TextInput
+                    label={translate("gameName")}
+                    key={form.key("name")}
+                    {...form.getInputProps("name")}
+                />
+                <InputWrapper label={translate("boardSize")}>
+                    <Button.Group>
                         {[6, 7, 8].map(n => {
                             return (
-                                <button
-                                    key={n}
-                                    className={classNames("button", {
-                                        "is-info": formState.board_size === n,
-                                        "is-selected": formState.board_size === n,
-                                    })}
-                                    onClick={() => setValueInFormState({ board_size: n as BoardSize })}
+                                <Button
+                                    key={`board_size_${n}`}
+                                    variant={form.getValues().boardSize === n ? "light" : "outline"}
+                                    onClick={() => form.setFieldValue("boardSize", n as BoardSize)}
                                 >
                                     {n}
-                                </button>
-                            )
+                                </Button>
+                            );
                         })}
-                    </div>
-                </div>
-            </div>
-            <div className="field is-horizontal">
-                <div className="field-label">
-                    <label
-                        className="label"
-                        onClick={() => setValueInFormState({ public: !formState.public })}
-                    >
-                        {translate("public")}
-                    </label>
-                </div>
-                <div className="field-body">
-                    <div className="field is-narrow">
-                        <div className="control">
-                            <label className="radio">
-                                <input
-                                    type="checkbox"
-                                    checked={formState.public}
-                                    onChange={() => setValueInFormState({ public: !formState.public })}
-                                />
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div className="field is-horizontal">
-                <div className="field-label">
-                    <label
-                        className="label"
-                        onClick={() => setValueInFormState({ show_progress: !formState.show_progress })}
-                    >
-                        {translate("showProgress")}
-                    </label>
-                </div>
-                <div className="field-body">
-                    <div className="field is-narrow">
-                        <div className="control">
-                            <label className="radio">
-                                <input
-                                    type="checkbox"
-                                    checked={formState.show_progress}
-                                    onChange={() => setValueInFormState({ show_progress: !formState.show_progress })}
-                                />
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div className="field is-horizontal">
-                <div className="field-label is-normal">
-                    <label className="label">{translate("gameName")}</label>
-                </div>
-                <div className="field-body">
-                    <div className="field">
-                        <div className="control">
-                            <input
-                                data-role={"create_game_name"}
-                                className="input"
-                                type="text"
-                                value={formState.name}
-                                onChange={(event) => setValueInFormState({ name: event.target.value })}
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div className="field is-horizontal">
-                <div className="field-label is-normal" />
-                <div className="field-body">
-                    <button
-                        data-role={"create_game_submit"}
-                        className="button is-link"
-                        onClick={() => props.onSubmit(formState)}
-                    >
-                        {translate("createGame")}
-                    </button>
-                </div>
-            </div>
-        </div>
+                    </Button.Group>
+                </InputWrapper>
+                <InputWrapper label={translate("playerCount")}>
+                    <Button.Group>
+                        {[2, 3, 4].map(n => {
+                            return (
+                                <Button
+                                    key={`player_count_${n}`}
+                                    variant={form.getValues().playerCount === n ? "light" : "outline"}
+                                    onClick={() => form.setFieldValue("playerCount", n as PlayerCount)}
+                                >
+                                    {n}
+                                </Button>
+                            );
+                        })}
+                    </Button.Group>
+                </InputWrapper>
+                <InputWrapper
+                    label={translate("showProgress")}
+                    description={translate("showProgressDescription")}
+                >
+                    <Checkbox defaultChecked onChange={(e) => {}}/>
+                </InputWrapper>
+                <Button onClick={() => props.onSubmit(form.getValues())} mt="md">{translate("createGame")}</Button>
+            </Fieldset>
+        </Container>
     );
 }
 
@@ -199,7 +92,7 @@ export const CreateGameFormConnected = connect<any, any, any, any>(undefined, { 
 export function onCreateGameFormSubmit(data: CreateGameFormFormState): Thunk<Genial> {
     return async (dispatch, getState, { fetchJson }) => {
         const playerUuid = selectPlayerUuid(getState());
-        const body: any = { ...data, admin_uuid: playerUuid };
+        const body: any = { ...data, admin_uuid: playerUuid, public: true };
         const result = await fetchJson("http://localhost:8080/api/game", { body: JSON.stringify(body) });
         console.log(result);
         dispatch(setGenialState(immer.produce(getState(), state => {

@@ -18,6 +18,8 @@ export const SPECIAL_CORNERS: SpecialCorners = SPECIAL_CORNER_COORDINATES.reduce
 
 export const DIRECTIONS: Direction[] = SPECIAL_CORNER_COORDINATES.map(pair => [pair[0] / 6, pair[1] / 6] as Direction);
 
+export const MAX_PLAYER_COUNT = 4;
+
 // ((8+9+10+11+12+13+14)*2+15)/2
 // 84 / 6 = 14
 //

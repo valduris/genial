@@ -241,12 +241,25 @@ export function getColorByPoint<T extends Point>(boardHexyPairs: BoardHexyPairs,
     return color || getSpecialCornerColorByPoint(point);
 }
 
+export function debugAssert(message: string) {
+    throw new Error(message);
+}
+
 export function isPointSpecialCorner(point: Point): boolean {
     return SPECIAL_CORNERS.some(specialCorner => specialCorner.x === point.x && specialCorner.y === point.y);
 }
 
 export function isRightButton(event: any): boolean {
     return (event.which && event.which === 3) || (event.button && event.button === 2);
+}
+
+/**
+ * it wraps
+ */
+export function getNextElementFromArray<T>(array: T[], current: T): T {
+    const currentIndex = array.indexOf(current);
+    const index = (currentIndex + 1) === array.length ? 0 : currentIndex + 1;
+    return array[index];
 }
 
 export function translate(what: keyof typeof translations): string {

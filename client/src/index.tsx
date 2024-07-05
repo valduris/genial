@@ -41,7 +41,7 @@ export function setGenialState(state: DeepPartial<Genial>): Thunk {
 export function createEmptyGame(): Game {
     return {
         uuid: "",
-        players: [],
+        players: {},
         createdAt: "",
         boardSize: 6,
         playerCount: 2,
@@ -190,11 +190,7 @@ export async function initialize(): Promise<InitializeResult> {
 
     document.addEventListener("keydown", onKeyDown, false);
 
-    if (!window.EventSource) {
-        // TODO show browser unsupported popup
-    }
-
-    console.log("new event source");
+    console.log("new event source", getOrCreatePlayerUuidForUnauthenticatedPlayer());
     const source = new EventSource(`http://localhost:8080/events/${getOrCreatePlayerUuidForUnauthenticatedPlayer()}`);
 
     source.addEventListener("message", (e) => {

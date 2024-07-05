@@ -1,7 +1,7 @@
 import * as immer from "immer";
 import * as React from "react";
 import { connect } from "react-redux";
-import { createTheme, MantineProvider } from '@mantine/core';
+import { createTheme, MantineProvider, AppShell } from '@mantine/core';
 
 import { Thunk, PlayerHexyPairIndex, Genial, GameStatus } from "./types"
 import { setGenialState } from "./index";
@@ -10,10 +10,9 @@ import { BoardConnected } from "./components/Board";
 import { CreateGameFormConnected } from "./components/CreateGameForm";
 import { LobbyGameConnected } from "./components/lobbyGame/LobbyGame";
 import { Navigation } from "./components/navigation/Navigation";
-import { GameStartFormConnected } from "./components/GameStartForm";
+import { PlayerRegistrationFormConnected } from "./components/PlayerRegistrationForm";
 
 import '@mantine/core/styles.css';
-import { PlayerRegistrationFormConnected } from "./components/PlayerRegistrationForm";
 
 export interface GenialUiStateProps {
     game: Genial["game"];
@@ -24,32 +23,23 @@ const theme = createTheme({});
 export function GenialUi(props: GenialUiStateProps) {
     return (
         <MantineProvider theme={theme}>
-            <div className="genial">
-                <Navigation />
-                <hr />
-                {/*{!props.game && (*/}
-                    <>
-                        <div className="columns">
-                            <div className="column is-4">
-                                {<CreateGameFormConnected />}
-                            </div>
-                            <div className="column is-8">
-                                <LobbyGameListConnected />
-                                <LobbyGameConnected />
-                            </div>
-                        </div>
-                    </>
-                {/*)}*/}
-                <GameStartFormConnected />
-                {props.game && props.game.status === GameStatus.InProgress && (
-                    <>
-                        <BoardConnected />
-                        <PlayerHexyPairListConnected />
-                        <ProgressBarsConnected />
-                    </>
-                )}
-                <PlayerRegistrationFormConnected />
-            </div>
+            <AppShell>
+                <div className="genial">
+                    <Navigation />
+                    <hr />
+                    <CreateGameFormConnected />
+                    <LobbyGameListConnected />
+                    {props.game && <LobbyGameConnected />}
+                    {props.game && props.game.status === GameStatus.InProgress && (
+                        <>
+                            <BoardConnected />
+                            <PlayerHexyPairListConnected />
+                            <ProgressBarsConnected />
+                        </>
+                    )}
+                    <PlayerRegistrationFormConnected />
+                </div>
+            </AppShell>
         </MantineProvider>
     );
 }
@@ -58,9 +48,7 @@ export const GenialUiConnected = connect<any, any, any, any>((state: Genial) => 
     game: state.game,
 }))(GenialUi);
 
-export type OnPlayerHexyPairClickState = Genial;
-
-export function onPlayerHexyPairClick(hexyPairIndex: PlayerHexyPairIndex, hexyIndex: 0 | 1): Thunk<OnPlayerHexyPairClickState> {
+export function onPlayerHexyPairClick(hexyPairIndex: PlayerHexyPairIndex, hexyIndex: 0 | 1): Thunk {
     return (dispatch, getState) => {
         dispatch(setGenialState(immer.produce(getState(), state => {
             state.player.hexyPairs.forEach(hexyPair => {
