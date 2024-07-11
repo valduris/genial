@@ -1,9 +1,15 @@
 use std::{sync::Arc, time::Duration};
 
 use actix_web::rt::time::interval;
-use actix_web_lab::sse::{self, ChannelStream, Sse};
+use actix_web_lab::{
+    sse::{self, Sse},
+    util::InfallibleStream,
+};
 use futures_util::future;
 use parking_lot::Mutex;
+use serde_json::json;
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::ReceiverStream;
 
 pub struct Broadcaster {
     inner: Mutex<BroadcasterInner>,
@@ -11,7 +17,7 @@ pub struct Broadcaster {
 
 #[derive(Debug, Clone, Default)]
 struct BroadcasterInner {
-    clients: Vec<sse::Sender>,
+    clients: Vec<mpsc::Sender<sse::Event>>,
 }
 
 impl Broadcaster {
@@ -20,13 +26,14 @@ impl Broadcaster {
         let this = Arc::new(Broadcaster {
             inner: Mutex::new(BroadcasterInner::default()),
         });
+
         Broadcaster::spawn_ping(Arc::clone(&this));
-        // println!("created success");
 
         this
     }
 
-    /// Pings clients every 10 seconds to see if they are alive and remove them from the broadcast list if not.
+    /// Pings clients every 10 seconds to see if they are alive and remove them from the broadcast
+    /// list if not.
     fn spawn_ping(this: Arc<Self>) {
         actix_web::rt::spawn(async move {
             let mut interval = interval(Duration::from_secs(10));
@@ -38,14 +45,15 @@ impl Broadcaster {
         });
     }
 
+    pub fn client_count(&self) -> usize {
+        self.inner.lock().clients.len()
+    }
+
     /// Removes all non-responsive clients from broadcast list.
     async fn remove_stale_clients(&self) {
         let clients = self.inner.lock().clients.clone();
-        println!("active client {:?}", clients);
 
         let mut ok_clients = Vec::new();
-
-        println!("okay active client {:?}", ok_clients);
 
         for client in clients {
             if client
@@ -61,14 +69,14 @@ impl Broadcaster {
     }
 
     /// Registers client with broadcaster, returning an SSE response body.
-    pub async fn new_client(&self) -> Sse<ChannelStream> {
-        println!("starting creation");
-        let (tx, rx) = sse::channel(10);
+    pub async fn new_client(&self) -> Sse<InfallibleStream<ReceiverStream<sse::Event>>> {
+        let (tx, rx) = mpsc::channel(10);
 
-        tx.send(sse::Data::new("connected")).await.unwrap();
-        println!("creating new clients success {:?}", tx);
+        tx.send(sse::Data::new("{\"connected\": true}").into()).await.unwrap();
+
         self.inner.lock().clients.push(tx);
-        rx
+
+        Sse::from_infallible_receiver(rx)
     }
 
     /// Broadcasts `msg` to all clients.
@@ -77,7 +85,7 @@ impl Broadcaster {
 
         let send_futures = clients
             .iter()
-            .map(|client| client.send(sse::Data::new(msg)));
+            .map(|client| client.send(sse::Data::new(msg).into()));
 
         // try to send to all clients, ignoring failures
         // disconnected clients will get swept up by `remove_stale_clients`

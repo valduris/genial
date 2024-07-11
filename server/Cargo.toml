@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4.1.0"
-actix-web-lab = "0.18.5"
+actix-web-lab = "0.20.1"
 parking_lot = "0.12.1"
 futures-util = { version = "0.3.25", default-features = false, features = ["std"] }
 env = "0.0.0"
@@ -17,6 +17,8 @@ serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 serde = { version = "1.0.197" }
 actix-cors = "0.7.0"
 uuid = { version = "1.8.0", features = ["v4", "serde"] }
+tokio = { version = "1.24.2", features = ["sync", "io-util"] }
+tokio-stream = "0.1.1"
 
 [lints.rust]
 non_snake_case = { level = "allow" }

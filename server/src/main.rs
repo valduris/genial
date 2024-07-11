@@ -2,11 +2,13 @@ use std::{time::Duration};
 use dotenv::dotenv;
 use actix_web::{http::header, Responder, web, App, HttpServer, delete, get, patch, post, HttpResponse, http::header::ContentType};
 mod broadcast;
+use actix_web::rt::time::interval;
 // use tower_http::cors::{Any, CorsLayer};
 use self::broadcast::Broadcaster;
 use actix_web_lab::extract::Path;
 use std::sync::Arc;
 use std::env;
+use std::ops::Deref;
 use actix_cors::Cors;
 use sqlx::postgres::{PgPoolOptions};
 use sqlx::{FromRow, Pool, Postgres, Row};
@@ -24,17 +26,22 @@ pub struct AppState {
 // 'finished',
 // 'cancelled'
 
-pub async fn sse_connect_client(state: web::Data<AppState>, Path((uuid,)): Path<(String,)>) -> impl Responder {
-    state.broadcaster.new_client().await;
+pub async fn sse_connect_client(state: web::Data<AppState>, Path(()): Path<()>) -> impl Responder {
+    state.broadcaster.new_client().await
     // state.postgres_pool.broadcast(&msg).await;
     // let res = format!("dataq2 {}", _uuid.as_str());
     // let res2 = format!("hello {}", "world!").to_string();
-    println!("{}", uuid);
-    HttpResponse::Ok()
-        .insert_header(("Content-Type", "text/event-stream"))
-        .insert_header(("Cache-Control", "no-cache"))
-        .insert_header(("Connection", "keep-alive"))
-        .body("data")
+    // println!("{}", uuid);
+    // HttpResponse::Ok()
+    //     .insert_header(("Content-Type", "text/event-stream"))
+    //     .insert_header(("Cache-Control", "no-cache"))
+    //     .insert_header(("Connection", "keep-alive"))
+    //     .body("data: 123daataatatatat!\n")
+}
+
+#[get("/events")]
+async fn event_stream(broadcaster: web::Data<Broadcaster>) -> impl Responder {
+    broadcaster.new_client().await
 }
 
 // #[serde(rename = "updatedAt")]
@@ -128,7 +135,7 @@ async fn api_game_create(body: web::Json<CreateGameSchema>, data: web::Data<AppS
         .execute(&data.postgres_pool)
         .await;
 
-    data.broadcaster.broadcast("{\"type\": \"game_created\"}").await;
+    data.broadcaster.broadcast("data: {\"type\": \"game_created\"}c").await;
 
     match query_result {
         Ok(_) => {
@@ -174,6 +181,30 @@ async fn api_player_register(body: web::Json<ApiPlayerRegisterSchema>, data: web
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct ApiPlayerReadySchema {
+    pub playerUuid: String,
+    pub ready: bool,
+}
+
+async fn api_player_ready_schema(body: web::Json<ApiPlayerRegisterSchema>, data: web::Data<AppState>) -> impl Responder {
+    let uuid = Uuid::new_v4();
+    let query = r#"UPDATE player SET ready = $1"#;
+    let result  = sqlx::query(query)
+        .bind(uuid).bind(body.name.clone()).bind(body.email.clone()).bind(body.password.clone())
+        .execute(&data.postgres_pool)
+        .await;
+
+    match result {
+        Ok(_) => {
+            return HttpResponse::Ok().json(serde_json::json!({ "status": "success" }));
+        }
+        Err(e) => {
+            return HttpResponse::InternalServerError().json(serde_json::json!({"status": "error","message": format!("{:?}", e)}));
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct GameJoinSchema {
     pub gameUuid: String,
     pub playerUuid: String,
@@ -187,7 +218,7 @@ async fn api_game_join(body: web::Json<GameJoinSchema>, data: web::Data<AppState
         .execute(&data.postgres_pool)
         .await;
 
-    data.broadcaster.broadcast("{\"type\": \"player_joined_game\"}").await;
+    data.broadcaster.broadcast("data: {\"type\": \"player_joined_game\"}\n").await;
 
     match query_result {
         Ok(_) => {
@@ -237,6 +268,15 @@ async fn main() -> std::io::Result<()> {
 
     // let mut conn = pool.acquire().await.expect("Could not acquire connection pool");
 
+    // actix_web::rt::spawn(async move {
+    //     let mut interval = interval(Duration::from_secs(2));
+
+        // loop {
+        //     interval.tick().await;
+            // &broadcaster.broadcast("data: mydata!!!").await;
+        // }
+    // });
+
     HttpServer::new(move || {
         let cors = Cors::default()
             .allowed_origin("http://localhost:3000")
@@ -253,13 +293,14 @@ async fn main() -> std::io::Result<()> {
                 postgres_pool: pool.clone(),
             }))
             .wrap(cors)
-            .route("/events/{uuid}", web::get().to(sse_connect_client))
+            .route("/events", web::get().to(sse_connect_client))
             .route("/api/games", web::get().to(api_get_games))
             .route("/api/game", web::post().to(api_game_create))
             .route("/api/game/join", web::post().to(api_game_join))
             .route("/api/game/leave", web::post().to(api_game_leave))
             .route("/api/lobby_game", web::post().to(api_get_lobby_game))
             .route("/api/player/register", web::post().to(api_player_register))
+            .route("/api/player/placeHexy", web::post().to(api_player_register))
     })
     .bind(format!("{}:{}", "127.0.0.1", "8080"))?
     .run()

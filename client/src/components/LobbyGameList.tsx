@@ -83,7 +83,7 @@ export const LobbyGameListConnected = connect<any, any, any, any>((state: Genial
 
 export function onJoinGame(gameUuid: Uuid4): Thunk<Genial> {
     return async (dispatch, getState, { fetchJson }) => {
-        log.info("getState() before onJoinGame", getState());
+        // log.info("getState() before onJoinGame", getState());
 
         const params: { gameUuid: Uuid4; playerUuid: Uuid4; } = {
             gameUuid: gameUuid,
@@ -95,6 +95,6 @@ export function onJoinGame(gameUuid: Uuid4): Thunk<Genial> {
             state.gameUuid = gameUuid;
         })));
 
-        log.info("getState()", getState());
+        // log.info("getState()", getState());
     };
 }
