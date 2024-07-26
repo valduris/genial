@@ -1,8 +1,8 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
-import { applyMiddleware, createStore, DeepPartial } from "redux";
-import thunk from "redux-thunk";
+import { applyMiddleware, createStore } from "redux";
+import { thunk, withExtraArgument } from "redux-thunk";
 import {
     Dispatch,
     EventSourceState,
@@ -31,6 +31,11 @@ export function setGenialStatePlain(state: Genial) {
         payload: state,
     } as const;
 }
+
+type DeepPartial<T> = T extends object ? {
+    [P in keyof T]?: DeepPartial<T[P]>;
+} : T;
+
 
 export function setGenialState(state: DeepPartial<Genial>): Thunk {
     return (dispatch, getState) => {
@@ -154,7 +159,7 @@ export async function initialize(): Promise<InitializeResult> {
         fetchJson: fetchJson,
     };
     const rootReducer = createGenialReducer();
-    const middlewares = applyMiddleware(thunk.withExtraArgument(thunkExtraArguments));
+    const middlewares = applyMiddleware(withExtraArgument(thunkExtraArguments));
     const store = createStore(rootReducer, middlewares);
 
     if (rootNode) {

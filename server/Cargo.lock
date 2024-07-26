@@ -801,7 +801,6 @@ version = "0.1.0"
 dependencies = [
  "actix-cors",
  "actix-web",
- "actix-web-codegen",
  "actix-web-lab",
  "dotenv",
  "futures-util",

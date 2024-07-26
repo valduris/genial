@@ -53,7 +53,7 @@ export function LobbyGameList(props: LobbyGameListProps) {
                                 <Table.Td>{game.boardSize}</Table.Td>
                                 <Table.Td>
                                     <InputWrapper>
-                                        <Checkbox defaultChecked={game.showProgress} />
+                                        <Checkbox defaultChecked={game.showProgress} disabled />
                                     </InputWrapper>
                                 </Table.Td>
                                 <Table.Td>{`${game.players.length} / ${game.playerCount}`}</Table.Td>
