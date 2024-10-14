@@ -3,18 +3,18 @@ import * as immer from "immer";
 import { connect } from "react-redux";
 
 import { debugAssert, mapTimes, translate } from "../../utils";
-import { Game, Genial, LobbyGames, PlayerCount, Thunk, Uuid4 } from "../../types";
+import { LobbyGame, Genial, LobbyGames, Thunk } from "../../types";
 import { setGenialState } from "../../index";
-import { selectPlayerUuid } from "../../selectors";
+import { selectPlayerUuid, selectPlayerId } from "../../selectors";
 import { fetchJson } from "../../api";
 import { Button, Checkbox, Container, Fieldset, InputWrapper, Table, TextInput, Grid } from "@mantine/core";
 import { MAX_PLAYER_COUNT } from "../../consts";
 
 export interface LobbyGameStateProps {
     games: LobbyGames;
-    game: Game;
+    lobbyGame: LobbyGame;
     playerUuid: string;
-    adminUuid: string;
+    adminId: string;
 }
 
 export interface LobbyGameDispatchProps {
@@ -24,8 +24,8 @@ export interface LobbyGameDispatchProps {
 
 export type LobbyGameProps = LobbyGameStateProps & LobbyGameDispatchProps;
 
-export function LobbyGame(props: LobbyGameProps) {
-    if (!props.game) {
+export function LobbyGameComponent(props: LobbyGameProps) {
+    if (!props.lobbyGame) {
         return null;
     }
 
@@ -34,7 +34,7 @@ export function LobbyGame(props: LobbyGameProps) {
             <Grid>
                 <Grid.Col span={6}>
                     <Fieldset>
-                        <TextInput label={translate("gameName")} value={props.game.name} disabled />
+                        <TextInput label={translate("gameName")} value={props.lobbyGame.name} disabled />
                         <InputWrapper label={translate("boardSize")}>
                             <Button.Group>
                                 {[6, 7, 8].map(n => {
@@ -76,14 +76,16 @@ export function LobbyGame(props: LobbyGameProps) {
                         </Table.Thead>
                         <Table.Tbody>
                             {mapTimes(MAX_PLAYER_COUNT, (i => {
-                                const player = props.game.players[i];
-                                console.log("player", player);
+                                const player = props.lobbyGame.players[i];
+                                console.log("player", props.lobbyGame.players);
                                 const content: string = player
                                     ? player.name
-                                    : props.game.playerCount >= i
+                                    : props.lobbyGame.playerCount >= i
                                         ? translate("waitingForPlayerToJoin")
                                         : translate("openSlot");
-                                // props.game.adminUuid !== props.playerUuid
+
+                                console.log("player", player);
+                                // props.game.adminId !== props.playerUuid
 
                                 return (
                                     <Table.Tr key={i}>
@@ -106,20 +108,20 @@ export function LobbyGame(props: LobbyGameProps) {
 }
 
 export const LobbyGameConnected = connect<any, any, any, any>((state: Genial) => ({
-    game: state.game,
+    lobbyGame: state.lobbyGameId ? state.lobbyGames[state.lobbyGameId] : undefined,
     playerUuid: selectPlayerUuid(state),
-    adminUuid: selectPlayerUuid(state),
-}), { onLeaveGame: onLeaveGame, onReadyChange: onReadyChange })(LobbyGame);
+    adminId: selectPlayerId(state),
+}), { onLeaveGame: onLeaveGame, onReadyChange: onReadyChange })(LobbyGameComponent);
 
 export function onReadyChange(): Thunk {
     return async (dispatch, getState) => {
         const state = getState();
 
-        if (!state.game) {
+        if (!state.lobbyGameId) {
             return debugAssert("state.game not defined");
         }
 
-        const ready = !state.game.players[state.playerUuid].ready;
+        const ready = !state.lobbyGames[state.lobbyGameId].players[state.playerId].ready;
         const body = { playerUuid: selectPlayerUuid(getState()), ready: ready };
         const result = await fetchJson("http://localhost:8080/api/game/ready", { body: JSON.stringify(body) });
     }
@@ -128,12 +130,21 @@ export function onReadyChange(): Thunk {
 export function onLeaveGame(): Thunk {
     return async (dispatch, getState) => {
         const state = getState();
+
+        console.log("state", state);
+
+        if (!state.game) {
+            return;
+        }
+
         const result = await fetchJson("http://localhost:8080/api/game/leave", {
-            body: JSON.stringify({ playerUuid: selectPlayerUuid(state) }),
+            body: JSON.stringify({
+                playerUuid: selectPlayerUuid(state),
+                gameUuid: state.game.uuid,
+            }),
         });
         dispatch(setGenialState(immer.produce(state, state => {
             state.game = undefined;
-            state.gameUuid = undefined;
         })));
     };
 }

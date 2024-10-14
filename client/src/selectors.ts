@@ -148,3 +148,7 @@ export function selectIsPointCoveredWithHexy(state: Pick<Genial, "game">, point:
 export function selectPlayerUuid(state: Pick<Genial, "playerUuid">): Uuid4 {
     return state.playerUuid;
 }
+
+export function selectPlayerId(state: Pick<Genial, "playerId">): number {
+    return state.playerId;
+}

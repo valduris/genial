@@ -16,6 +16,7 @@ import '@mantine/core/styles.css';
 
 export interface GenialUiStateProps {
     game: Genial["game"];
+    playerName: Genial["player"]["name"];
 }
 
 const theme = createTheme({});
@@ -26,6 +27,7 @@ export function GenialUi(props: GenialUiStateProps) {
             <AppShell>
                 <div className="genial">
                     <Navigation />
+                    <span>{props.playerName}</span>
                     <hr />
                     <CreateGameFormConnected />
                     <LobbyGameListConnected />
@@ -46,6 +48,7 @@ export function GenialUi(props: GenialUiStateProps) {
 
 export const GenialUiConnected = connect<any, any, any, any>((state: Genial) => ({
     game: state.game,
+    playerName: state.player.name,
 }))(GenialUi);
 
 export function onPlayerHexyPairClick(hexyPairIndex: PlayerHexyPairIndex, hexyIndex: 0 | 1): Thunk {

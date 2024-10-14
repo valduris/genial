@@ -4,7 +4,6 @@ export const translations = {
     createGame: "Create game",
     playerCount: "Player count",
     player: "Player",
-    public: "Public",
     showProgress: "Show progress",
     showProgressDescription: "Progress of other players will be shown to you and your progress will be visible to others as well.",
     name: "Name",

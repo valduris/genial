@@ -28,20 +28,22 @@ export type Direction = [-1, 0] | [0, -1] | [1, 0] | [-1, 1] | [0, 1] | [1, -1];
 
 export interface Player {
     name: string;
+    hexyPairs: PlayerHexyPairs;
+    movesInTurn: number;
+}
+
+export interface LocalPlayer {
+    name: string;
     hoveredHexyCoords: Point | undefined;
     hexyPairs: PlayerHexyPairs;
     firstPlacedHexy: BoardHexy | undefined;
     movesInTurn: number;
+    progress: Progress;
 }
 
 export interface Point {
     x: number;
     y: number;
-}
-
-export interface Rect extends Point {
-    width: number;
-    height: number;
 }
 
 export type UnixTimestamp = number;
@@ -84,11 +86,16 @@ export type SpecialCorners = [BoardHexy, BoardHexy, BoardHexy, BoardHexy, BoardH
 
 export interface LobbyGame {
     uuid: Uuid4;
-    players: string[];
+    players: Record<number, {
+        id: number;
+        name: string;
+        ready: boolean;
+    }>;
     name: string;
     boardSize: BoardSize;
     playerCount: 2 | 3 | 4;
     showProgress: boolean;
+    adminId: number;
 }
 
 export type LobbyGames = LobbyGame[];
@@ -96,49 +103,38 @@ export type LobbyGames = LobbyGame[];
 export type GamesLoadingState = "noGames" | "loading" | "loaded";
 
 export interface Game {
-    adminUuid: Uuid4;
-    authorId: string;
+    adminId: number;
     boardSize: BoardSize;
-    createdAt: string;
-    finished: false;
-    players: Record<Uuid4, {
-        uuid: Uuid4;
+    players: Record<number, {
         name: string;
         progress?: Progress;
-        ready: boolean;
+        movesInTurn: number;
     }>;
     drawableHexyPairs: DrawableHexyPairs;
     hexyPairs: BoardHexyPairs;
-    progress: Record<Uuid4, Progress>;
     name: string;
     playerCount: PlayerCount;
-    public: boolean;
     showProgress: boolean;
     status: GameStatus;
     uuid: Uuid4;
-}
-
-export enum EventSourceState {
-    CONNECTING = 0,
-    OPEN = 1,
-    CLOSED = 2,
 }
 
 export interface Genial {
     loadingState: GamesLoadingState;
     lobbyGames: LobbyGames;
     eventSourceState: EventSourceState;
-    authenticated: boolean;
     playerUuid: Uuid4;
+    playerId: number;
+    playerName: string;
+    lobbyGameId?: number;
     menu: {
         open: boolean;
         entries: MenuOption[];
         selectedEntryIndex: number;
     },
-    gameUuid?: string;
     game?: Game;
-    player: Player;
-    players: Record<Uuid4, Player>;
+    player: LocalPlayer;
+    players: Record<number, Player>;
 }
 
 export type HexColor = string;
@@ -155,8 +151,15 @@ export enum LogLevel {
     Exclusive = 0,
 }
 
+export enum EventSourceState {
+    CONNECTING = 0,
+    OPEN = 1,
+    CLOSED = 2,
+}
+
 export enum LocalStorageKey {
     PlayerUuid = "playerUuid",
+    PlayerName = "playerName",
 }
 
 export interface ThunkExtraArguments {

@@ -22,8 +22,9 @@ import { SET_GENIAL_UI_STATE } from "./consts";
 import { Api, fetchJson } from "./api";
 
 import "./Genial.css";
-import { uuid4 } from "./utils";
-import { selectPlayerUuid } from "./selectors";
+import { createEmptyProgress, randomFromRange, uuid4 } from "./utils";
+import { selectIsPointAllowedToReceiveHover, selectPlayerUuid } from "./selectors";
+import * as immer from "immer";
 
 export function setGenialStatePlain(state: Genial) {
     return {
@@ -47,21 +48,18 @@ export function createEmptyGame(): Game {
     return {
         uuid: "",
         players: {},
-        createdAt: "",
         boardSize: 6,
         playerCount: 2,
         name: "",
         drawableHexyPairs: [],
         hexyPairs: [],
-        adminUuid: "",
-        authorId: "",
-        finished: false,
+        adminId: 0,
         status: GameStatus.Lobby,
-        public: true,
         showProgress: true,
-        progress: {},
     }
 }
+
+// {"type":"player_joined","value":{"players":[{"name":"1","ready":true,"uuid":"df1ed066-dca7-4ead-a3bf-19c19c531bbb"}]}}
 
 export const initialGenialState: Genial = {
     loadingState: "loading",
@@ -78,11 +76,13 @@ export const initialGenialState: Genial = {
         name: "",
         hoveredHexyCoords: undefined,
         movesInTurn: 0,
+        progress: createEmptyProgress(),
     },
     game: createEmptyGame(),
     lobbyGames: [],
-    authenticated: false,
     playerUuid: getOrCreatePlayerUuidForUnauthenticatedPlayer(),
+    playerName: getOrCreatePlayerNameForUnauthenticatedPlayer(),
+    playerId: 0,
 };
 
 export function getOrCreatePlayerUuidForUnauthenticatedPlayer(): Uuid4 {
@@ -95,6 +95,18 @@ export function getOrCreatePlayerUuidForUnauthenticatedPlayer(): Uuid4 {
     }
 
     return uuidFromLocalStorage;
+}
+
+export function getOrCreatePlayerNameForUnauthenticatedPlayer(): string {
+    const playerNameFromLocalStorage = localStorage.getItem(LocalStorageKey.PlayerName);
+
+    if (!playerNameFromLocalStorage) {
+        const playerName = "Hexter_" + randomFromRange(1000, 9999);
+        localStorage.setItem(LocalStorageKey.PlayerName, playerName);
+        return playerName
+    }
+
+    return playerNameFromLocalStorage;
 }
 
 export function createGenialReducer(initialUiState: Genial = initialGenialState) {
@@ -219,7 +231,11 @@ export function onEventSourceMessage(data: object): Thunk {
             fetchJson("http://localhost:8080/api/pong", {
                 body: JSON.stringify({ playerUuid: selectPlayerUuid(getState()) }),
             });
-        } else if ("playerJoined" in data) {
+        } else if ("player_joined" in data) {
+            console.log("player_joined", data);
+            dispatch(setGenialState(immer.produce(getState(), state => {
+                // state.game.
+            })));
             // dispatch(setGenialState(data));
         }
         console.log("onEventSourceMessage", data);

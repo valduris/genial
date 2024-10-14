@@ -56,13 +56,13 @@ export function LobbyGameList(props: LobbyGameListProps) {
                                         <Checkbox defaultChecked={game.showProgress} disabled />
                                     </InputWrapper>
                                 </Table.Td>
-                                <Table.Td>{`${game.players.length} / ${game.playerCount}`}</Table.Td>
-                                <Table.Td>{game.players.join(", ")}</Table.Td>
+                                <Table.Td>{`${Object.keys(game.players).length} / ${game.playerCount}`}</Table.Td>
+                                <Table.Td>{Object.keys(game.players).map(id => game.players[(id as unknown as number)].name).join(", ")}</Table.Td>
                                 <Table.Td>
                                     <button
                                         onClick={() => props.onJoinGame(game.uuid)}
                                         data-role={"game_list_join"}
-                                        disabled={game.playerCount === game.players.length as PlayerCount}
+                                        disabled={game.playerCount === Object.keys(game.players).length as PlayerCount}
                                     >
                                         {translate("joinGame")}
                                     </button>
@@ -76,23 +76,25 @@ export function LobbyGameList(props: LobbyGameListProps) {
     );
 }
 
-export const LobbyGameListConnected = connect<any, any, any, any>((state: Genial) => ({
+export const LobbyGameListConnected = connect((state: Genial) => ({
     games: state.lobbyGames,
     loadingState: state.loadingState,
 }), { onJoinGame: onJoinGame })(LobbyGameList);
 
 export function onJoinGame(gameUuid: Uuid4): Thunk<Genial> {
     return async (dispatch, getState, { fetchJson }) => {
-        // log.info("getState() before onJoinGame", getState());
-
         const params: { gameUuid: Uuid4; playerUuid: Uuid4; } = {
             gameUuid: gameUuid,
             playerUuid: selectPlayerUuid(getState()),
         };
         const result: any = await fetchJson("http://localhost:8080/api/game/join", { body: JSON.stringify(params) });
-        log.info(result);
+        log.info("/api/game/join", result);
         dispatch(setGenialState(immer.produce(getState(), state => {
-            state.gameUuid = gameUuid;
+            // const currLobbyGame = state.lobbyGames.find(game => game.players. === gameUuid);
+            const lobbyGame = state.lobbyGames.find(game => game.uuid === gameUuid);
+            if (lobbyGame) {
+                lobbyGame.players = result.data.players;
+            }
         })));
 
         // log.info("getState()", getState());
