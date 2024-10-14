@@ -12,7 +12,7 @@ parking_lot = "0.12.1"
 futures-util = { version = "0.3.25", default-features = false, features = ["std"] }
 dotenv = "0.15.0"
 sqlx = { version = "0.7.3", features=["postgres", "runtime-tokio", "uuid"] }
-serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+serde_json = { version = "1.0", default-features = false, features = ["alloc", "raw_value"] }
 serde = { version = "1.0.193" }
 actix-cors = "0.6.5"
 uuid = { version = "1.8.0", features = ["v4", "serde"] }

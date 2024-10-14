@@ -10,21 +10,24 @@ use parking_lot::Mutex;
 use serde_json::json;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
+use std::collections::HashMap;
+use serde::de::Unexpected::Option;
+use uuid::uuid;
 
 pub struct Broadcaster {
     inner: Mutex<BroadcasterInner>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 struct BroadcasterInner {
-    clients: Vec<mpsc::Sender<sse::Event>>,
+    clients: HashMap<String, mpsc::Sender<sse::Event>>,
 }
 
 impl Broadcaster {
     /// Constructs new broadcaster and spawns ping loop.
     pub fn create() -> Arc<Self> {
         let this = Arc::new(Broadcaster {
-            inner: Mutex::new(BroadcasterInner::default()),
+            inner: Mutex::new(BroadcasterInner { clients: HashMap::new() }),
         });
 
         Broadcaster::spawn_ping(Arc::clone(&this));
@@ -53,15 +56,15 @@ impl Broadcaster {
     async fn remove_stale_clients(&self) {
         let clients = self.inner.lock().clients.clone();
 
-        let mut ok_clients = Vec::new();
+        let mut ok_clients = HashMap::new();
 
-        for client in clients {
+        for (uuid, client) in clients {
             if client
                 .send(sse::Event::Comment("ping".into()))
                 .await
                 .is_ok()
             {
-                ok_clients.push(client.clone());
+                ok_clients.insert(uuid, client.clone());
             }
         }
 
@@ -69,12 +72,12 @@ impl Broadcaster {
     }
 
     /// Registers client with broadcaster, returning an SSE response body.
-    pub async fn new_client(&self) -> Sse<InfallibleStream<ReceiverStream<sse::Event>>> {
+    pub async fn new_client(&self, uuid: String) -> Sse<InfallibleStream<ReceiverStream<sse::Event>>> {
         let (tx, rx) = mpsc::channel(10);
 
         tx.send(sse::Data::new("{\"connected\": true}").into()).await.unwrap();
 
-        self.inner.lock().clients.push(tx);
+        self.inner.lock().clients.insert(uuid, tx);
 
         Sse::from_infallible_receiver(rx)
     }
@@ -85,7 +88,27 @@ impl Broadcaster {
 
         let send_futures = clients
             .iter()
-            .map(|client| client.send(sse::Data::new(msg).into()));
+            .map(|(_uuid, client)| client.send(sse::Data::new(msg).into()));
+
+        // try to send to all clients, ignoring failures
+        // disconnected clients will get swept up by `remove_stale_clients`
+        let _ = future::join_all(send_futures).await;
+    }
+
+    /// Broadcasts `msg` to specific clients by uuids.
+    pub async fn broadcast_to(&self, uuids: Vec<String>, msg: &str) {
+        let clients = self.inner.lock().clients.clone();
+
+        let send_futures = clients
+            .iter()
+            .map(|(uuid, client)| {
+                if uuids.contains(uuid) {
+                    return Some(client.send(sse::Data::new(msg).into()));
+                }
+                return None;
+            })
+            .filter(|e| e.is_some() )
+            .map(|e| e.unwrap());
 
         // try to send to all clients, ignoring failures
         // disconnected clients will get swept up by `remove_stale_clients`
