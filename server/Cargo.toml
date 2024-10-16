@@ -11,7 +11,7 @@ actix-web-lab = "0.20.1"
 parking_lot = "0.12.1"
 futures-util = { version = "0.3.25", default-features = false, features = ["std"] }
 dotenv = "0.15.0"
-sqlx = { version = "0.7.3", features=["postgres", "runtime-tokio", "uuid"] }
+sqlx = { version = "0.8.2", features=["postgres", "runtime-tokio", "uuid"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc", "raw_value"] }
 serde = { version = "1.0.193" }
 actix-cors = "0.6.5"
