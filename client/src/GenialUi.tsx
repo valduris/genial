@@ -46,7 +46,7 @@ export function GenialUi(props: GenialUiStateProps) {
     );
 }
 
-export const GenialUiConnected = connect<any, any, any, any>((state: Genial) => ({
+export const GenialUiConnected = connect((state: Genial) => ({
     game: state.game,
     playerName: state.player.name,
 }))(GenialUi);

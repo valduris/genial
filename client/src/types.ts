@@ -28,8 +28,6 @@ export type Direction = [-1, 0] | [0, -1] | [1, 0] | [-1, 1] | [0, 1] | [1, -1];
 
 export interface Player {
     name: string;
-    hexyPairs: PlayerHexyPairs;
-    movesInTurn: number;
 }
 
 export interface LocalPlayer {
@@ -86,7 +84,7 @@ export type SpecialCorners = [BoardHexy, BoardHexy, BoardHexy, BoardHexy, BoardH
 
 export interface LobbyGame {
     uuid: Uuid4;
-    players: Record<number, {
+    players: Array<{
         id: number;
         name: string;
         ready: boolean;
@@ -98,7 +96,7 @@ export interface LobbyGame {
     adminId: number;
 }
 
-export type LobbyGames = LobbyGame[];
+export type LobbyGames = Record<Uuid4, LobbyGame>;
 
 export type GamesLoadingState = "noGames" | "loading" | "loaded";
 
@@ -108,9 +106,8 @@ export interface Game {
     players: Record<number, {
         name: string;
         progress?: Progress;
-        movesInTurn: number;
+        movesInTurn?: number;
     }>;
-    drawableHexyPairs: DrawableHexyPairs;
     hexyPairs: BoardHexyPairs;
     name: string;
     playerCount: PlayerCount;
@@ -126,7 +123,6 @@ export interface Genial {
     playerUuid: Uuid4;
     playerId: number;
     playerName: string;
-    lobbyGameId?: number;
     menu: {
         open: boolean;
         entries: MenuOption[];
@@ -134,7 +130,6 @@ export interface Genial {
     },
     game?: Game;
     player: LocalPlayer;
-    players: Record<number, Player>;
 }
 
 export type HexColor = string;

@@ -1,16 +1,16 @@
 import * as React from "react";
 import { connect } from "react-redux";
 import classNames from "classnames";
-import { Genial, Player, PlayerHexyPairIndex } from "../types";
+import {Genial, LocalPlayer, PlayerHexyPairIndex} from "../types";
 import { onPlayerHexyPairClick } from "../GenialUi";
 import { HexyComponent } from "./Hexy";
 
 export interface PlayerHexyPairListStateProps {
-    player: Player;
+    player: LocalPlayer;
 }
 
 export interface PlayerHexyPairListDispatchProps {
-    onPlayerHexyPairClick: typeof onPlayerHexyPairClick;
+    onPlayerHexyPairClick: (...parameters: Parameters<typeof onPlayerHexyPairClick>) => void;
 }
 
 export type PlayerHexyPairListProps = PlayerHexyPairListDispatchProps & PlayerHexyPairListStateProps;
@@ -51,7 +51,7 @@ export function PlayerHexyPairList(props: PlayerHexyPairListProps) {
     )
 }
 
-export const PlayerHexyPairListConnected = connect<any, any, any, any>(
+export const PlayerHexyPairListConnected = connect(
     (state: Genial) => ({ player: state.player }),
     { onPlayerHexyPairClick: onPlayerHexyPairClick },
 )(PlayerHexyPairList);

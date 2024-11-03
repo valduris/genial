@@ -2,13 +2,13 @@ import * as React from "react";
 import * as ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
 import { applyMiddleware, createStore } from "redux";
-import { thunk, withExtraArgument } from "redux-thunk";
+import { withExtraArgument } from "redux-thunk";
 import {
     Dispatch,
     EventSourceState,
     Game,
     GameStatus,
-    Genial,
+    Genial, LobbyGame, LobbyGames,
     LocalStorageKey,
     PermanentAny,
     Thunk,
@@ -23,8 +23,7 @@ import { Api, fetchJson } from "./api";
 
 import "./Genial.css";
 import { createEmptyProgress, randomFromRange, uuid4 } from "./utils";
-import { selectIsPointAllowedToReceiveHover, selectPlayerUuid } from "./selectors";
-import * as immer from "immer";
+import { onEventSourceMessage } from "./eventSource";
 
 export function setGenialStatePlain(state: Genial) {
     return {
@@ -47,19 +46,16 @@ export function setGenialState(state: DeepPartial<Genial>): Thunk {
 export function createEmptyGame(): Game {
     return {
         uuid: "",
-        players: {},
         boardSize: 6,
         playerCount: 2,
         name: "",
-        drawableHexyPairs: [],
-        hexyPairs: [],
         adminId: 0,
+        hexyPairs: [],
         status: GameStatus.Lobby,
         showProgress: true,
+        players: [],
     }
 }
-
-// {"type":"player_joined","value":{"players":[{"name":"1","ready":true,"uuid":"df1ed066-dca7-4ead-a3bf-19c19c531bbb"}]}}
 
 export const initialGenialState: Genial = {
     loadingState: "loading",
@@ -69,7 +65,6 @@ export const initialGenialState: Genial = {
         entries: [],
         selectedEntryIndex: 0,
     },
-    players: {},
     player: {
         hexyPairs: [undefined, undefined, undefined, undefined, undefined, undefined],
         firstPlacedHexy: undefined,
@@ -79,10 +74,10 @@ export const initialGenialState: Genial = {
         progress: createEmptyProgress(),
     },
     game: createEmptyGame(),
-    lobbyGames: [],
+    lobbyGames: {},
     playerUuid: getOrCreatePlayerUuidForUnauthenticatedPlayer(),
     playerName: getOrCreatePlayerNameForUnauthenticatedPlayer(),
-    playerId: 0,
+    playerId: 1,
 };
 
 export function getOrCreatePlayerUuidForUnauthenticatedPlayer(): Uuid4 {
@@ -187,7 +182,14 @@ export async function initialize(): Promise<InitializeResult> {
     GENIAL_GLOBAL.store = store;
 
     fetchJson("http://localhost:8080/api/games", { method: "GET" }).then((games) => {
-        store.dispatch(setGenialState({ lobbyGames: games, loadingState: games.length > 0 ? "loaded" : "noGames" }));
+        store.dispatch(setGenialState({
+            lobbyGames: games.reduce((memo: LobbyGames, game: LobbyGame) => {
+                memo[game.uuid] = game;
+                return memo;
+            }, {}),
+            loadingState: games.length > 0 ? "loaded" : "noGames"
+        }));
+        console.log("api/games", store.getState());
     });
 
     const initializeResult = {
@@ -211,6 +213,7 @@ export async function initialize(): Promise<InitializeResult> {
     const source = new EventSource(`http://localhost:8080/events/${getOrCreatePlayerUuidForUnauthenticatedPlayer()}`);
 
     source.addEventListener("message", (e) => {
+        console.log("MSG", e);
         store.dispatch(onEventSourceMessage(JSON.parse(e.data)));
     }, false);
 
@@ -219,27 +222,14 @@ export async function initialize(): Promise<InitializeResult> {
     }, false);
 
     source.addEventListener("error", (e) => {
+        console.log('source.addEventListener("error"', e);
         store.dispatch(setGenialState({ eventSourceState: (e as PermanentAny).readyState as 0 | 1 | 2 }));
     }, false);
 
     return initializeResult;
 }
 
-export function onEventSourceMessage(data: object): Thunk {
-    return (dispatch, getState) => {
-        if ("ping" in data) {
-            fetchJson("http://localhost:8080/api/pong", {
-                body: JSON.stringify({ playerUuid: selectPlayerUuid(getState()) }),
-            });
-        } else if ("player_joined" in data) {
-            console.log("player_joined", data);
-            dispatch(setGenialState(immer.produce(getState(), state => {
-                // state.game.
-            })));
-            // dispatch(setGenialState(data));
-        }
-        console.log("onEventSourceMessage", data);
-    };
-}
-
 initialize();
+
+
+

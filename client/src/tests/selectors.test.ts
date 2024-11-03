@@ -1,5 +1,6 @@
 import { createHexy, createPlayerHexyPair } from "../utils";
-import { selectHexyStyleByPoint, SelectHexyStyleByPointState } from "../selectors";
+import {selectCurrentGameUuid, selectHexyStyleByPoint, SelectHexyStyleByPointState} from "../selectors";
+import {FirstParam} from "../types";
 
 describe("selectHexyStyleByPoint", () => {
     it("returns correct previewed hexy style", () => {
@@ -29,5 +30,59 @@ describe("selectHexyStyleByPoint", () => {
             },
             preview: true,
         });
+    });
+});
+describe("selectCurrentGameUuid", () => {
+    it("returns game uuid of current player if defined", () => {
+        const state: FirstParam<typeof selectCurrentGameUuid> = {
+            "lobbyGames": {
+                "fa8011c3-056b-4e26-b24e-a67d21649597": {
+                    "boardSize": 6,
+                    "name": "",
+                    "playerCount": 2,
+                    "players": [],
+                    "showProgress": true,
+                    "adminId": 12,
+                    "uuid": "fa8011c3-056b-4e26-b24e-a67d21649597"
+                },
+                "42243e19-22f2-4a6f-b8c8-b27e1cdb9d08": {
+                    "boardSize": 6,
+                    "name": "",
+                    "playerCount": 2,
+                    "players": [
+                        {
+                            "id": 1,
+                            "name": "1",
+                            "ready": false
+                        }
+                    ],
+                    "adminId": 12897,
+                    "showProgress": true,
+                    "uuid": "42243e19-22f2-4a6f-b8c8-b27e1cdb9d08"
+                },
+                "1f3ed932-1518-4fee-8746-b540405b5fe7": {
+                    "boardSize": 6,
+                    "name": "",
+                    "playerCount": 2,
+                    "players": [],
+                    "showProgress": true,
+                    "adminId": 11212,
+                    "uuid": "1f3ed932-1518-4fee-8746-b540405b5fe7"
+                },
+                "9b7a1aae-5b9f-4218-90d4-90722675e289": {
+                    "boardSize": 6,
+                    "name": "",
+                    "playerCount": 2,
+                    "players": [],
+                    "showProgress": true,
+                    "adminId": 12334234222,
+                    "uuid": "9b7a1aae-5b9f-4218-90d4-90722675e289"
+                },
+            },
+            "playerId": 1
+        };
+        const uuid = selectCurrentGameUuid(state);
+
+        expect(uuid).toEqual("42243e19-22f2-4a6f-b8c8-b27e1cdb9d08");
     });
 });

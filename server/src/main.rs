@@ -163,6 +163,15 @@ async fn api_lobby_player_ready(body: web::Json<ApiPlayerReadySchema>, data: web
         .execute(&data.postgres_pool)
         .await;
 
+    let row: ApiLobbyGame = sqlx::query_as(r#"
+        SELECT g.uuid AS game_uuid, COALESCE(array_agg(json_build_object('ready', p.ready, 'id', p.id, 'name', p.name)) FILTER (WHERE p.id IS NOT NULL), '{}') AS players
+        FROM game g
+        LEFT JOIN player p ON g.uuid = p.game_uuid
+        GROUP BY g.uuid
+    "#).fetch_one(&data.postgres_pool).await.unwrap();
+
+    data.broadcaster.broadcast(json!({ "type": "player_joined", "value": row }).to_string().as_str()).await;
+
     return handle_postgres_query_result(result);
 }
 
@@ -175,6 +184,8 @@ pub struct GameJoinSchema {
 #[derive(sqlx::FromRow, Debug, Serialize)]
 struct ApiLobbyGame {
     players: Vec<serde_json::Value>,
+    #[serde(rename(serialize = "gameUuid"))]
+    game_uuid: String,
 }
 
 async fn api_lobby_game_join(body: web::Json<GameJoinSchema>, data: web::Data<AppState>) -> impl Responder {
@@ -184,12 +195,14 @@ async fn api_lobby_game_join(body: web::Json<GameJoinSchema>, data: web::Data<Ap
         .execute(&data.postgres_pool)
         .await;
 
-    let row: ApiLobbyGame = sqlx::query_as(r#"
+    let row: Vec<ApiLobbyGame> = sqlx::query_as(r#"
         SELECT g.uuid AS game_uuid, COALESCE(array_agg(json_build_object('ready', p.ready, 'id', p.id, 'name', p.name)) FILTER (WHERE p.id IS NOT NULL), '{}') AS players
         FROM game g
-        left join player p on g.uuid = p.game_uuid
-        group by g.uuid
-    "#).bind(body.gameUuid.clone()).fetch_one(&data.postgres_pool).await.unwrap();
+        LEFT JOIN player p on g.uuid = p.game_uuid
+        GROUP BY g.uuid
+    "#).bind(body.gameUuid.clone()).fetch_all(&data.postgres_pool).await.unwrap();
+
+    // println!("{:?}", row);
 
     data.broadcaster.broadcast(json!({ "type": "player_joined", "value": row }).to_string().as_str()).await;
 
@@ -230,7 +243,7 @@ pub struct GamePlaceHexySchema {
     pub hexyPairIndex: u8,
 }
 
-pub fn errorLog(s: String) {
+pub fn error_log(s: String) {
     let mut file = OpenOptions::new().create_new(true).write(true).append(true).open("./error.log").unwrap();
 
     if let Err(e) = writeln!(file, "{}", s) {
@@ -251,6 +264,7 @@ async fn main() -> std::io::Result<()> {
         .connect(&db_connection_str)
         .await
         .expect("can't connect to database");
+
 
     let bs: Option<BoardSize> = BoardSize::new(78);
     // let mut conn = pool.acquire().await.expect("Could not acquire connection pool");

@@ -11,14 +11,11 @@ import {
 } from "../selectors";
 import { HexyComponent } from "./Hexy";
 import {
-    Genial, PlayerHexyPair, Point, ProgressValue, Thunk, BoardHexyPair, BoardSize, Game, Player
+    Genial, PlayerHexyPair, Point, ProgressValue, Thunk, BoardHexyPair, BoardSize
 } from "../types";
 import { setGenialState } from "../index";
 import { COLORS } from "../consts";
-
-export interface BoardOwnProps {
-    children: React.ReactNode;
-}
+import {onPlayerHexyPairClick} from "../GenialUi";
 
 export interface BoardStateProps {
     game: Genial["game"];
@@ -26,11 +23,11 @@ export interface BoardStateProps {
 }
 
 export interface BoardDispatchProps {
-    onBoardHexyMouseEnter: typeof onBoardHexyMouseEnter;
-    onPreviewedBoardHexyClick: typeof onPreviewedBoardHexyClick;
+    onBoardHexyMouseEnter: (...parameters: Parameters<typeof onBoardHexyMouseEnter>) => void;
+    onPreviewedBoardHexyClick: (...parameters: Parameters<typeof onPreviewedBoardHexyClick>) => void;
 }
 
-export type BoardProps = BoardOwnProps & BoardStateProps & BoardDispatchProps;
+export type BoardProps = BoardStateProps & BoardDispatchProps;
 
 const VIEW_BOX_MAP = {
     6: "0 0 1110 1040",
@@ -116,11 +113,11 @@ export function Board(props: BoardProps) {
     );
 }
 
-export const BoardConnected = connect<any, any, any, any>(
+export const BoardConnected = connect(
     (state: Genial) => ({ game: state.game, player: state.player }),
     {
-        onBoardHexyMouseEnter: onBoardHexyMouseEnter,
         onPreviewedBoardHexyClick: onPreviewedBoardHexyClick,
+        onBoardHexyMouseEnter: onBoardHexyMouseEnter,
     },
 )(Board);
 
@@ -170,26 +167,26 @@ export function onPreviewedBoardHexyClick(point: Point, preview: boolean): Thunk
                 }, 0);
                 const movesRemaining = state.player.movesInTurn + movesGained - 1;
 
-                state.player.movesInTurn = movesRemaining;
+                // state.player.movesInTurn = movesRemaining;
                 state.game.hexyPairs.push(boardHexyPair);
                 state.player.hexyPairs.splice(state.player.hexyPairs.indexOf(playerSelectedHexyPair), 1, undefined);
                 state.player.firstPlacedHexy = undefined;
 
                 if (movesRemaining === 0) {
                     while (state.player.hexyPairs.some(h => h === undefined)) {
-                        const randomIndex = Math.floor(Math.random() * state.game.drawableHexyPairs.length);
-                        const [drawnHexyPair] = state.game.drawableHexyPairs.splice(randomIndex, 1);
+                        // const randomIndex = Math.floor(Math.random() * state.game.drawableHexyPairs.length);
+                        // const [drawnHexyPair] = state.game.drawableHexyPairs.splice(randomIndex, 1);
                         // console.log(JSON.stringify(state.player.hexyPairs, null, 2))
-                        const emptyIndex = state.player.hexyPairs.findIndex(h => h === undefined);
-                        state.player.hexyPairs.splice(emptyIndex, 1, drawnHexyPair.map(h => ({
-                            color: h.color,
-                            selected: false,
-                        })) as PlayerHexyPair);
+                        // const emptyIndex = state.player.hexyPairs.findIndex(h => h === undefined);
+                        // state.player.hexyPairs.splice(emptyIndex, 1, drawnHexyPair.map(h => ({
+                        //     color: h.color,
+                        //     selected: false,
+                        // })) as PlayerHexyPair);
                     }
                     // assign move to another player
                 }
 
-                state.player.movesInTurn = 1;
+                // state.player.movesInTurn = 1;
 
                 Api.placeHexyPairOnBoard({
                     playerId: 1,

@@ -8,6 +8,8 @@ import {
     Point, Uuid4
 } from "./types";
 import { getNeighboringHexysOf, getSpecialCornerColorByPoint, areNeighbors, isPointSpecialCorner } from "./utils";
+import {setGenialState} from "./index";
+import * as immer from "immer";
 
 export function selectPlayerSelectedHexyPair(state: DeepPick<Genial, "player", "hexyPairs">): PlayerHexyPair | undefined {
     return state.player.hexyPairs.find(hexyPair => hexyPair?.some(hexy => hexy.selected));
@@ -151,4 +153,13 @@ export function selectPlayerUuid(state: Pick<Genial, "playerUuid">): Uuid4 {
 
 export function selectPlayerId(state: Pick<Genial, "playerId">): number {
     return state.playerId;
+}
+
+export function selectCurrentGameUuid(state: Pick<Genial, "lobbyGames" | "playerId">): Uuid4 | undefined {
+    return Object.keys(state.lobbyGames).reduce((memo: Uuid4 | undefined, gameUuid: string) => {
+        if (!memo && state.lobbyGames[gameUuid].players.some(p => p.id === state.playerId)) {
+            memo = gameUuid;
+        }
+        return memo;
+    }, undefined);
 }

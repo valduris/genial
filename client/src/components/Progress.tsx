@@ -3,7 +3,6 @@ import { connect } from "react-redux";
 import classNames from "classnames";
 import { Genial, Progress } from "../types";
 import { mapTimes } from "../utils";
-import { onPlayerHexyPairClick } from "../GenialUi";
 import { COLORS } from "../consts";
 
 export interface ProgressStateProps {
@@ -47,7 +46,6 @@ export function ProgressBars(props: ProgressProps) {
 }
 
 // MapStateToPropsParam<GenialProps, GenialUiOwnProps, any>
-export const ProgressBarsConnected = connect<any, any, any, any>(
+export const ProgressBarsConnected = connect(
     (state: Genial) => ({ progress: state.player.progress }),
-    { onPlayerHexyPairClick: onPlayerHexyPairClick },
 )(ProgressBars);

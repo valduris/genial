@@ -5,13 +5,9 @@ import { useForm } from "@mantine/form";
 import { Button, Fieldset, TextInput, InputWrapper, Checkbox, Container } from "@mantine/core";
 
 import { translate } from "../utils";
-import { BoardSize, Game, GameStatus, Genial, PlayerCount, Thunk, Uuid4 } from "../types";
+import { BoardSize, Game, Genial, PlayerCount, Thunk } from "../types";
 import { setGenialState } from "../index";
-import { selectPlayerUuid } from "../selectors";
-
-export interface CreateGameFormOwnProps {
-    visible: boolean;
-}
+import {selectCurrentGameUuid, selectPlayerUuid} from "../selectors";
 
 export interface CreateGameFormFormState {
     boardSize: Game["boardSize"];
@@ -24,9 +20,17 @@ export interface CreateGameFormDispatchProps {
     onSubmit: (data: CreateGameFormFormState) => void;
 }
 
-export type CreateGameFormProps = CreateGameFormOwnProps & CreateGameFormDispatchProps;
+export interface CreateGameFromStateProps {
+    hidden: boolean;
+}
+
+export type CreateGameFormProps = CreateGameFromStateProps & CreateGameFormDispatchProps;
 
 export function CreateGameForm(props: CreateGameFormProps) {
+    if (props.hidden) {
+        return null;
+    }
+
     const form = useForm({
         mode: "uncontrolled",
         initialValues: {
@@ -94,16 +98,19 @@ export function CreateGameForm(props: CreateGameFormProps) {
     );
 }
 
-export const CreateGameFormConnected = connect<any, any, any, any>(undefined, { onSubmit: onCreateGameFormSubmit })(CreateGameForm);
+export const CreateGameFormConnected = connect(
+    (state: Genial) => ({ hidden: !!selectCurrentGameUuid(state) }),
+    { onSubmit: onCreateGameFormSubmit },
+)(CreateGameForm);
 
 export function onCreateGameFormSubmit(data: CreateGameFormFormState): Thunk<Genial> {
     return async (dispatch, getState, { fetchJson }) => {
         const playerUuid = selectPlayerUuid(getState());
         const body: any = { ...data, admin_uuid: playerUuid };
         const result = await fetchJson("http://localhost:8080/api/game", { body: JSON.stringify(body) });
-        console.log("game create result", result);
+
         dispatch(setGenialState(immer.produce(getState(), state => {
-            state.lobbyGames.push({
+            state.lobbyGames[result.data.uuid] = {
                 ...result.data,
                 adminId: state.playerId,
                 players: [{
@@ -111,8 +118,7 @@ export function onCreateGameFormSubmit(data: CreateGameFormFormState): Thunk<Gen
                     name: state.playerName,
                     ready: false,
                 }],
-            });
+            };
         })));
-        console.log("onCreateGameFormSubmit", getState());
     };
 }

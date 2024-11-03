@@ -3,18 +3,17 @@ import * as immer from "immer";
 import { connect } from "react-redux";
 
 import { debugAssert, mapTimes, translate } from "../../utils";
-import { LobbyGame, Genial, LobbyGames, Thunk } from "../../types";
+import {LobbyGame, Genial, Thunk } from "../../types";
 import { setGenialState } from "../../index";
-import { selectPlayerUuid, selectPlayerId } from "../../selectors";
+import {selectPlayerUuid, selectPlayerId, selectCurrentGameUuid} from "../../selectors";
 import { fetchJson } from "../../api";
 import { Button, Checkbox, Container, Fieldset, InputWrapper, Table, TextInput, Grid } from "@mantine/core";
 import { MAX_PLAYER_COUNT } from "../../consts";
 
 export interface LobbyGameStateProps {
-    games: LobbyGames;
-    lobbyGame: LobbyGame;
+    lobbyGame: LobbyGame | undefined;
     playerUuid: string;
-    adminId: string;
+    adminId: number;
 }
 
 export interface LobbyGameDispatchProps {
@@ -76,16 +75,12 @@ export function LobbyGameComponent(props: LobbyGameProps) {
                         </Table.Thead>
                         <Table.Tbody>
                             {mapTimes(MAX_PLAYER_COUNT, (i => {
-                                const player = props.lobbyGame.players[i];
-                                console.log("player", props.lobbyGame.players);
+                                const player = props.lobbyGame!.players[i];
                                 const content: string = player
                                     ? player.name
-                                    : props.lobbyGame.playerCount >= i
+                                    : props.lobbyGame!.playerCount >= i
                                         ? translate("waitingForPlayerToJoin")
                                         : translate("openSlot");
-
-                                console.log("player", player);
-                                // props.game.adminId !== props.playerUuid
 
                                 return (
                                     <Table.Tr key={i}>
@@ -107,21 +102,77 @@ export function LobbyGameComponent(props: LobbyGameProps) {
     );
 }
 
-export const LobbyGameConnected = connect<any, any, any, any>((state: Genial) => ({
-    lobbyGame: state.lobbyGameId ? state.lobbyGames[state.lobbyGameId] : undefined,
-    playerUuid: selectPlayerUuid(state),
-    adminId: selectPlayerId(state),
-}), { onLeaveGame: onLeaveGame, onReadyChange: onReadyChange })(LobbyGameComponent);
+export const LobbyGameConnected = connect((state: Genial) => {
+    const lobbyGameUuid = selectCurrentGameUuid(state);
+    return {
+        lobbyGame: lobbyGameUuid ? state.lobbyGames[lobbyGameUuid] : undefined,
+        adminId: selectPlayerId(state),
+        playerUuid: selectPlayerUuid(state),
+    };
+}, { onLeaveGame: onLeaveGame, onReadyChange: onReadyChange })(LobbyGameComponent);
+
+// const state: FirstParam<typeof selectCurrentGameUuid> = {
+//     "lobbyGames": {
+//         "fa8011c3-056b-4e26-b24e-a67d21649597": {
+//             "boardSize": 6,
+//             "name": "",
+//             "playerCount": 2,
+//             "players": [],
+//             "showProgress": true,
+//             "adminId": 12,
+//             "uuid": "fa8011c3-056b-4e26-b24e-a67d21649597"
+//         },
+//         "42243e19-22f2-4a6f-b8c8-b27e1cdb9d08": {
+//             "boardSize": 6,
+//             "name": "",
+//             "playerCount": 2,
+//             "players": [
+//                 {
+//                     "id": 1,
+//                     "name": "1",
+//                     "ready": false
+//                 }
+//             ],
+//             "adminId": 12897,
+//             "showProgress": true,
+//             "uuid": "42243e19-22f2-4a6f-b8c8-b27e1cdb9d08"
+//         },
+//         "1f3ed932-1518-4fee-8746-b540405b5fe7": {
+//             "boardSize": 6,
+//             "name": "",
+//             "playerCount": 2,
+//             "players": [],
+//             "showProgress": true,
+//             "adminId": 11212,
+//             "uuid": "1f3ed932-1518-4fee-8746-b540405b5fe7"
+//         },
+//         "9b7a1aae-5b9f-4218-90d4-90722675e289": {
+//             "boardSize": 6,
+//             "name": "",
+//             "playerCount": 2,
+//             "players": [],
+//             "showProgress": true,
+//             "adminId": 12334234222,
+//             "uuid": "9b7a1aae-5b9f-4218-90d4-90722675e289"
+//         },
+//     },
+//     "playerId": 1
+// };
+// const uuid = selectCurrentGameUuid(state);
+// console.log("uuid", uuid);
+// console.log("uuid", uuid);
+// console.log("uuid", uuid);
 
 export function onReadyChange(): Thunk {
     return async (dispatch, getState) => {
         const state = getState();
+        const lobbyGameUuid = selectCurrentGameUuid(state);
 
-        if (!state.lobbyGameId) {
+        if (!lobbyGameUuid) {
             return debugAssert("state.game not defined");
         }
 
-        const ready = !state.lobbyGames[state.lobbyGameId].players[state.playerId].ready;
+        const ready = !state.lobbyGames[lobbyGameUuid].players[state.playerId].ready;
         const body = { playerUuid: selectPlayerUuid(getState()), ready: ready };
         const result = await fetchJson("http://localhost:8080/api/game/ready", { body: JSON.stringify(body) });
     }

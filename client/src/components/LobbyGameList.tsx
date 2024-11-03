@@ -4,7 +4,7 @@ import * as immer from "immer";
 import { Checkbox, InputWrapper, Table, Container } from '@mantine/core';
 
 import { translate } from "../utils";
-import { GamesLoadingState, Genial, LobbyGames, PlayerCount, Thunk, Uuid4 } from "../types";
+import {GamesLoadingState, Genial, LobbyGame, LobbyGames, PlayerCount, Thunk, Uuid4} from "../types";
 import { log } from "../log";
 
 import { selectPlayerUuid } from "../selectors";
@@ -46,7 +46,8 @@ export function LobbyGameList(props: LobbyGameListProps) {
                             <td className={"noGames"}>{translate("noGames")}</td>
                         </Table.Tr>
                     )}
-                    {props.loadingState === "loaded" && props.games.map(game => {
+                    {props.loadingState === "loaded" && Object.keys(props.games).map(gameUuid => {
+                        const game = props.games[gameUuid];
                         return (
                             <Table.Tr key={game.uuid}>
                                 <Table.Td>{game.name}</Table.Td>
@@ -88,15 +89,5 @@ export function onJoinGame(gameUuid: Uuid4): Thunk<Genial> {
             playerUuid: selectPlayerUuid(getState()),
         };
         const result: any = await fetchJson("http://localhost:8080/api/game/join", { body: JSON.stringify(params) });
-        log.info("/api/game/join", result);
-        dispatch(setGenialState(immer.produce(getState(), state => {
-            // const currLobbyGame = state.lobbyGames.find(game => game.players. === gameUuid);
-            const lobbyGame = state.lobbyGames.find(game => game.uuid === gameUuid);
-            if (lobbyGame) {
-                lobbyGame.players = result.data.players;
-            }
-        })));
-
-        // log.info("getState()", getState());
     };
 }
