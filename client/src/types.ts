@@ -1,5 +1,5 @@
 import { SET_GENIAL_UI_STATE } from "./consts";
-import { Api, fetchJson } from "./api";
+import { fetchJson } from "./api";
 
 export type PermanentAny = any;
 
@@ -158,7 +158,6 @@ export enum LocalStorageKey {
 }
 
 export interface ThunkExtraArguments {
-    Api: typeof Api;
     fetchJson: typeof fetchJson,
 }
 

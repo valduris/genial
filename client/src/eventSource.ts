@@ -6,14 +6,14 @@ import {createEmptyGame, setGenialState} from "./index";
 
 interface PlayerJoined {
     type: "player_joined";
-    value: Array<{
+    value: {
         gameUuid: Uuid4;
         players: [{
             id: number;
             name: string;
             ready: boolean;
         }];
-    }>;
+    };
 }
 
 type EventSourceData = PlayerJoined;
@@ -31,12 +31,10 @@ export function onEventSourceMessage(data: EventSourceData): Thunk {
         } else if (isPlayerJoinedMessage(data)) {
             console.log("player_joined", data);
             dispatch(setGenialState(immer.produce(getState(), state => {
-                data.value.forEach(entry => {
-                    const lobbyGame = state.lobbyGames[entry.gameUuid];
-                    if (lobbyGame) {
-                        lobbyGame.players = entry.players;
-                    }
-                });
+                const lobbyGame = state.lobbyGames[data.value.gameUuid];
+                if (lobbyGame) {
+                    lobbyGame.players = data.value.players;
+                }
 
                 const currentGameUuid = selectCurrentGameUuid(state);
 
@@ -46,7 +44,7 @@ export function onEventSourceMessage(data: EventSourceData): Thunk {
                     state.game = { ...state.lobbyGames[currentGameUuid], status: GameStatus.Lobby, hexyPairs: [] };
                 }
                 // TODONOW
-                // const currentGameUuid = state.lo?bbyGames.find(g => g.players[state.playerId])
+                // const currentGameUuid = state.lobbyGames.find(g => g.players[state.playerId])
                 // state.game = state.lobbyGames[];
             })));
             console.log("getState", getState());

@@ -106,7 +106,7 @@ export const CreateGameFormConnected = connect(
 export function onCreateGameFormSubmit(data: CreateGameFormFormState): Thunk<Genial> {
     return async (dispatch, getState, { fetchJson }) => {
         const playerUuid = selectPlayerUuid(getState());
-        const body: any = { ...data, admin_uuid: playerUuid };
+        const body: any = { ...data, playerUuid: playerUuid };
         const result = await fetchJson("http://localhost:8080/api/game", { body: JSON.stringify(body) });
 
         dispatch(setGenialState(immer.produce(getState(), state => {

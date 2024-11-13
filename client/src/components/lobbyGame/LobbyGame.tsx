@@ -172,9 +172,21 @@ export function onReadyChange(): Thunk {
             return debugAssert("state.game not defined");
         }
 
-        const ready = !state.lobbyGames[lobbyGameUuid].players[state.playerId].ready;
+        let ready;
+
+        dispatch(setGenialState(immer.produce(getState(), state => {
+            const player = state.lobbyGames[lobbyGameUuid].players.find(p => !!p && p.id === state.playerId);
+
+            if (!player) {
+                return debugAssert("player not found");
+            }
+
+            player.ready = !player.ready;
+            ready = player.ready;
+        })));
+
         const body = { playerUuid: selectPlayerUuid(getState()), ready: ready };
-        const result = await fetchJson("http://localhost:8080/api/game/ready", { body: JSON.stringify(body) });
+        await fetchJson("http://localhost:8080/api/game/ready", { body: JSON.stringify(body) });
     }
 }
 

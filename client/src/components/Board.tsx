@@ -132,7 +132,7 @@ export function onBoardHexyMouseEnter(point: Point): Thunk {
 }
 
 export function onPreviewedBoardHexyClick(point: Point, preview: boolean): Thunk {
-    return (dispatch, getState, { Api }) => {
+    return (dispatch, getState) => {
         if (!preview) {
             return;
         }
@@ -188,10 +188,8 @@ export function onPreviewedBoardHexyClick(point: Point, preview: boolean): Thunk
 
                 // state.player.movesInTurn = 1;
 
-                Api.placeHexyPairOnBoard({
-                    playerId: 1,
-                    gameId: "some_id",
-                    hexy: boardHexyPair,
+                fetch("http://localhost:8080/api/game/placeHexy").then(result => {
+                    result.json();
                 });
             }
         })));

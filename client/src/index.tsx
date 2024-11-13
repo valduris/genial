@@ -19,7 +19,7 @@ import {
 import { GenialUiConnected } from "./GenialUi";
 import { GENIAL_GLOBAL } from "./global";
 import { SET_GENIAL_UI_STATE } from "./consts";
-import { Api, fetchJson } from "./api";
+import { fetchJson } from "./api";
 
 import "./Genial.css";
 import { createEmptyProgress, randomFromRange, uuid4 } from "./utils";
@@ -162,7 +162,6 @@ export interface InitializeResult {
 export async function initialize(): Promise<InitializeResult> {
     const rootNode = document.getElementById("root") as HTMLDivElement;
     const thunkExtraArguments: ThunkExtraArguments = {
-        Api: Api,
         fetchJson: fetchJson,
     };
     const rootReducer = createGenialReducer();

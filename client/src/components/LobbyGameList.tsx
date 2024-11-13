@@ -1,14 +1,11 @@
 import * as React from "react";
 import { connect } from "react-redux";
-import * as immer from "immer";
-import { Checkbox, InputWrapper, Table, Container } from '@mantine/core';
+import { Checkbox, InputWrapper, Table, Container, Button } from '@mantine/core';
 
 import { translate } from "../utils";
-import {GamesLoadingState, Genial, LobbyGame, LobbyGames, PlayerCount, Thunk, Uuid4} from "../types";
-import { log } from "../log";
+import {GamesLoadingState, Genial, LobbyGames, PlayerCount, Thunk, Uuid4} from "../types";
 
 import { selectPlayerUuid } from "../selectors";
-import { setGenialState } from "../index";
 
 export interface LobbyGameListStateProps {
     games: LobbyGames;
@@ -60,13 +57,14 @@ export function LobbyGameList(props: LobbyGameListProps) {
                                 <Table.Td>{`${Object.keys(game.players).length} / ${game.playerCount}`}</Table.Td>
                                 <Table.Td>{Object.keys(game.players).map(id => game.players[(id as unknown as number)].name).join(", ")}</Table.Td>
                                 <Table.Td>
-                                    <button
+                                    <Button
+                                        size="xs"
                                         onClick={() => props.onJoinGame(game.uuid)}
                                         data-role={"game_list_join"}
                                         disabled={game.playerCount === Object.keys(game.players).length as PlayerCount}
                                     >
                                         {translate("joinGame")}
-                                    </button>
+                                    </Button>
                                 </Table.Td>
                             </Table.Tr>
                         );
