@@ -801,6 +801,7 @@ dependencies = [
  "dotenv",
  "futures-util",
  "parking_lot",
+ "rand",
  "serde",
  "serde_json",
  "sqlx",

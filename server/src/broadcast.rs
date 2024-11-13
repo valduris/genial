@@ -12,7 +12,8 @@ use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use std::collections::HashMap;
 use serde::de::Unexpected::Option;
-use uuid::uuid;
+use serde_json::Value::String;
+use uuid::{uuid, Uuid};
 
 pub struct Broadcaster {
     inner: Mutex<BroadcasterInner>,
@@ -20,7 +21,7 @@ pub struct Broadcaster {
 
 #[derive(Debug, Clone)]
 struct BroadcasterInner {
-    clients: HashMap<String, mpsc::Sender<sse::Event>>,
+    clients: HashMap<Uuid, mpsc::Sender<sse::Event>>,
 }
 
 impl Broadcaster {
@@ -39,7 +40,7 @@ impl Broadcaster {
     /// list if not.
     fn spawn_ping(this: Arc<Self>) {
         actix_web::rt::spawn(async move {
-            let mut interval = interval(Duration::from_secs(10));
+            let mut interval = interval(Duration::from_secs(1));
 
             loop {
                 interval.tick().await;
@@ -72,7 +73,7 @@ impl Broadcaster {
     }
 
     /// Registers client with broadcaster, returning an SSE response body.
-    pub async fn new_client(&self, uuid: String) -> Sse<InfallibleStream<ReceiverStream<sse::Event>>> {
+    pub async fn new_client(&self, uuid: Uuid) -> Sse<InfallibleStream<ReceiverStream<sse::Event>>> {
         let (tx, rx) = mpsc::channel(10);
 
         tx.send(sse::Data::new("{\"connected\": true}").into()).await.unwrap();
@@ -96,12 +97,13 @@ impl Broadcaster {
     }
 
     /// Broadcasts `msg` to specific clients by uuids.
-    pub async fn broadcast_to(&self, uuids: Vec<String>, msg: &str) {
+    pub async fn broadcast_to(&self, uuids: Vec<Uuid>, msg: &str) {
         let clients = self.inner.lock().clients.clone();
 
         let send_futures = clients
             .iter()
             .map(|(uuid, client)| {
+                // TODO vveidelis check if this method works properly
                 if uuids.contains(uuid) {
                     return Some(client.send(sse::Data::new(msg).into()));
                 }
