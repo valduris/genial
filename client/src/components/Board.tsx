@@ -123,11 +123,12 @@ export const BoardConnected = connect(
 
 export function onBoardHexyMouseEnter(point: Point): Thunk {
     return (dispatch, getState) => {
-        dispatch(setGenialState(immer.produce(getState(), state => {
-            if (selectIsPointAllowedToReceiveHover(state, point)) {
+        const state = getState();
+        if (selectIsPointAllowedToReceiveHover(state, point)) {
+            dispatch(setGenialState(immer.produce(state, state => {
                 state.player.hoveredHexyCoords = point;
-            }
-        })));
+            })));
+        }
     };
 }
 

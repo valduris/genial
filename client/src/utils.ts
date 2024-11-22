@@ -224,7 +224,7 @@ export function getXyCoordsByRowCol(params: { row: number; col: number; boardSiz
     const x = Math.abs(params.boardSize + params.row + params.boardSize) * 85 / 2 + 85 * params.col + 5;
     const y = (params.row + params.boardSize) * 78 + 3;
 
-    return { x: x, y: y};
+    return { x: x, y: y };
 }
 
 export function getSpecialCornerColorByPoint<T extends Point>(point: T): Color | undefined {

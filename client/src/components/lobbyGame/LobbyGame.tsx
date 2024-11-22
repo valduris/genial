@@ -3,8 +3,8 @@ import * as immer from "immer";
 import { connect } from "react-redux";
 
 import { debugAssert, mapTimes, translate } from "../../utils";
-import {LobbyGame, Genial, Thunk } from "../../types";
-import { setGenialState } from "../../index";
+import {LobbyGame, Genial, Thunk, Game, GameStatus} from "../../types";
+import {createEmptyGame, setGenialState} from "../../index";
 import {selectPlayerUuid, selectPlayerId, selectCurrentGameUuid} from "../../selectors";
 import { fetchJson } from "../../api";
 import { Button, Checkbox, Container, Fieldset, InputWrapper, Table, TextInput, Grid } from "@mantine/core";
@@ -183,9 +183,13 @@ export function onReadyChange(): Thunk {
 
             player.ready = !player.ready;
             ready = player.ready;
+
+            if (ready) {
+                state.game = { ...createEmptyGame(), status: GameStatus.InProgress } as unknown as Game;
+            }
         })));
 
-        const body = { playerUuid: selectPlayerUuid(getState()), ready: ready };
+        const body = { playerUuid: selectPlayerUuid(getState()), ready: ready, gameUuid: lobbyGameUuid };
         await fetchJson("http://localhost:8080/api/game/ready", { body: JSON.stringify(body) });
     }
 }

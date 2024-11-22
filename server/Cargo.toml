@@ -13,12 +13,13 @@ futures-util = { version = "0.3.25", default-features = false, features = ["std"
 dotenv = "0.15.0"
 sqlx = { version = "0.8.2", features=["postgres", "runtime-tokio", "uuid"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc", "raw_value"] }
-serde = { version = "1.0.193" }
+serde = { version = "1.0.193", features = ["std", "default", "derive", "serde_derive"] }
 actix-cors = "0.6.5"
 uuid = { version = "1.8.0", features = ["v4", "serde"] }
 tokio = { version = "1.35.0", features = ["sync", "io-util"] }
 tokio-stream = "0.1.14"
 rand = "0.8.5"
+futures = "0.3.31"
 
 [lints.rust]
 non_snake_case = { level = "allow" }

@@ -19,7 +19,7 @@ export interface GenialUiStateProps {
     playerName: Genial["player"]["name"];
 }
 
-const myColor: MantineColorsTuple = [
+const COLORS: MantineColorsTuple = [
     "#fff4e1",
     "#ffe8cc",
     "#fed09b",
@@ -34,8 +34,9 @@ const myColor: MantineColorsTuple = [
 
 const theme = createTheme({
     colors: {
-        myColor: myColor,
-    }
+        blue: COLORS,
+    },
+    primaryColor: "blue",
 });
 
 export function GenialUi(props: GenialUiStateProps) {

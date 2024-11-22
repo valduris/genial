@@ -1,8 +1,12 @@
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
-use parking_lot::Mutex;
+use std::io::Read;
+use std::ops::Deref;
+use std::sync::{Arc};
+use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
+// use serde_json::SerializerSerializer;
 use uuid::Uuid;
+use serde::Serializer;
 use crate::game::HexPairsToBeDrawn;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -12,11 +16,12 @@ pub struct BoardHex {
     pub color: Color,
 }
 
+#[derive(Serialize)]
 pub struct PlayerHex {
     color: Color,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum Color {
     Red,
     Yellow,
@@ -38,9 +43,24 @@ impl Color {
         }
     }
 }
+
 pub type Games = Arc<RwLock<HashMap<Uuid, Game>>>;
 
-#[derive(Debug, Clone, Serialize)]
+pub type Players = Arc<RwLock<HashMap<Uuid, Arc<RwLock<Player>>>>>;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Player {
+    pub name: String,
+    pub ready: bool,
+    pub uuid: Uuid,
+    pub id: i32,
+    pub game_uuid: Option<Uuid>,
+    pub hex_pairs: Vec<HexPair>,
+    pub moves_in_turn: i8,
+    pub progress: Progress,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProgressValue(pub u16);
 // https://stackoverflow.com/questions/27673674/is-there-a-way-to-create-a-data-type-that-only-accepts-a-range-of-values
 
@@ -54,20 +74,7 @@ impl ProgressValue {
     }
 }
 
-#[derive(Debug, Serialize)]
-pub struct BoardSize(pub i32);
-
-impl BoardSize {
-    pub fn new(board_size: i32) -> Option<BoardSize> {
-        if board_size >= 6 && board_size <= 8 {
-            Some(BoardSize(board_size))
-        } else {
-            None
-        }
-    }
-}
-
-#[derive(Clone, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Progress {
     pub red: ProgressValue,
     pub yellow: ProgressValue,
@@ -90,17 +97,9 @@ impl Progress {
     }
 }
 
-#[derive(Clone, Serialize)]
-pub struct Player {
-    pub name: String,
-    pub hex_pairs: Vec<HexPair>,
-    pub moves_in_turn: i8,
-    pub progress: Progress,
-}
-
 pub struct Point {
-    x: i8,
-    y: i8,
+    pub x: i8,
+    pub y: i8,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -110,52 +109,31 @@ pub struct BoardHexPair(pub BoardHex, pub BoardHex);
 pub struct HexPair(pub Color, pub Color);
 
 pub type HexPairs = Vec<HexPair>;
-pub type BoardHexPairs = Vec<BoardHexPair>;
 
 pub type SpecialCorners = (BoardHex, BoardHex, BoardHex, BoardHex, BoardHex, BoardHex);
-
-pub struct LobbyGame {
-    uuid: String,
-    players: Vec<String>,
-    name: String,
-    board_size: BoardSize,
-    player_count: u8,
-    show_progress: bool,
-}
-
-pub type LobbyGames = Vec<LobbyGame>;
 
 #[derive(Serialize)]
 pub struct Game {
     pub admin_uuid: Uuid,
-    pub board_size: BoardSize,
-    pub hex_pairs_on_board: RwLock<BoardHexPairs>,
+    pub board_size: i32,
     pub hex_pairs_to_be_drawn: HexPairsToBeDrawn,
-    pub first_move_player_index: u8,
-    pub hex_pair_placement_history: RwLock<Vec<BoardHexPair>>,
+    pub first_move_player_index: Option<u8>,
     pub name: String,
-    pub public: bool,
     pub show_progress: bool,
     pub status: String,
     pub uuid: Uuid,
-    pub players: HashMap<Uuid, Player>,
+    pub player_count: i8,
+    pub players: Vec<Uuid>,
 }
 
-// pub struct Genial {
-//     loadingState: GamesLoadingState,
-//     lobbyGames: LobbyGames,
-//     eventSourceState: EventSourceState,
-//     authenticated: bool,
-//     playerUuid: Uuid4,
-//     playerName: String,
-//     menu: {
-//         open: bool,
-//         entries: MenuOption[],
-//         selectedEntryIndex: i8,
-//     },
-//     game?: Game,
-//     player: Player,
-//     players: Record<Uuid4, Player>,
+pub struct Board(pub Vec<BoardHex>);
+
+pub type Boards = Arc<RwLock<HashMap<Uuid, Board>>>;
+
+// impl Default for Boards {
+//     fn default() -> Self {
+//         Boards(Arc::new(RwLock::new(HashMap::new())))
+//     }
 // }
 
 // impl fmt::Debug for BoardHexPair {

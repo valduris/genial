@@ -8,7 +8,6 @@ use dotenv::dotenv;
 use actix_web::{http::header, Responder, web, App, HttpServer, HttpResponse };
 use actix_web::{error::ResponseError};
 use self::broadcast::Broadcaster;
-use self::types::{BoardSize};
 use actix_web_lab::extract::Path;
 use std::sync::{Arc};
 use std::env;
@@ -19,20 +18,24 @@ use sqlx::{FromRow, Pool, Postgres, Row};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::routes::game::api_game_place_hex_pair;
-use crate::routes::lobby::{api_game_create, api_get_games, api_get_lobby_game, api_lobby_game_join, api_lobby_game_leave, api_lobby_player_ready, api_player_register};
-use crate::types::{Games};
+use crate::routes::lobby::{
+    api_game_create, api_get_games, api_get_lobby_game, api_lobby_game_join, api_lobby_game_leave, api_lobby_player_ready, api_player_register, load_existing_games_from_database
+};
+use crate::types::{Boards, Games, Players};
 
 mod broadcast;
 mod types;
 mod game;
 mod util;
 mod routes;
-
+mod trash;
 
 pub struct AppState {
     broadcaster: Arc<Broadcaster>,
     postgres_pool: Pool<Postgres>,
     games: Games,
+    players: Players,
+    boards: Boards,
 }
 
 // 'created', // 'started', // 'finished', // 'cancelled'
@@ -52,8 +55,6 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("can't connect to database");
 
-
-    let bs: Option<BoardSize> = BoardSize::new(78);
     // let mut conn = pool.acquire().await.expect("Could not acquire connection pool");
 
     // actix_web::rt::spawn(async move {
@@ -65,6 +66,16 @@ async fn main() -> std::io::Result<()> {
         // }
     // });
 
+    let app_data = web::Data::new(AppState {
+        broadcaster: Arc::clone(&broadcaster),
+        postgres_pool: pool.clone(),
+        games: Games::default(),
+        players: Players::default(),
+        boards: Boards::default(),
+    });
+
+    load_existing_games_from_database(&app_data).await;
+
     HttpServer::new(move || {
         let cors = Cors::default()
             .allowed_origin("http://localhost:3000")
@@ -75,12 +86,7 @@ async fn main() -> std::io::Result<()> {
                 header::ACCEPT,
             ]);
         App::new()
-            // .app_data(web::Data::new(AppState { db: pool.clone() }))
-            .app_data(web::Data::new(AppState {
-                broadcaster: Arc::clone(&broadcaster),
-                postgres_pool: pool.clone(),
-                games: Games::default(),
-            }))
+            .app_data(app_data.clone())
             .wrap(cors)
             .route("/events/{uuid}", web::get().to(sse_connect_client))
             .route("/api/games", web::get().to(api_get_games))

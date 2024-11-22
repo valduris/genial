@@ -2,7 +2,7 @@ import {GameStatus, Thunk, Uuid4} from "./types";
 import { fetchJson } from "./api";
 import {selectCurrentGameUuid, selectPlayerUuid} from "./selectors";
 import * as immer from "immer";
-import {createEmptyGame, setGenialState} from "./index";
+import { setGenialState } from "./index";
 
 interface PlayerJoined {
     type: "player_joined";
