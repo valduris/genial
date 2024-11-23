@@ -28,48 +28,53 @@ pub async fn api_game_place_hex_pair(body: web::Json<PlaceHexPairSchema>, data: 
         return HttpResponse::BadRequest().body(message);
     }
 
-    {
-        // 1) remove hex pair from players hex pair list and insert hex pair in board hex pair list
-        let mut player_hex_pairs = data.players.write().get(&body.playerUuid).unwrap().read().hex_pairs.clone();
-        match player_hex_pairs.clone().get(body.hexPairIndex) {
-            Some(player_hex_pair) => {
-                player_hex_pairs.remove(body.hexPairIndex);
+    // 1) remove hex pair from players hex pair list and insert hex pair in board hex pair list
+    let player = data.players.read().get(&body.playerUuid).unwrap().clone();
+    let mut player_hex_pairs = player.read().hex_pairs.clone();
+    match player_hex_pairs.clone().get(body.hexPairIndex) {
+        Some(player_hex_pair) => {
+            player_hex_pairs.remove(body.hexPairIndex);
 
-                match data.boards.read().get(&body.gameUuid) {
-                    Some(board) => {
-                        let board_hex_1 = BoardHex { color: player_hex_pair[0].clone(), x: body.x1, y: body.y1 };
-                        let board_hex_2 = BoardHex { color: player_hex_pair[1].clone(), x: body.x2, y: body.y2 };
-                        let progress_gained = calculate_progress_gained(board.read().to_vec(), [board_hex_1, board_hex_2]);
+            match data.boards.read().get(&body.gameUuid) {
+                Some(board) => {
+                    let board_hex_1 = BoardHex { color: player_hex_pair[0].clone(), x: body.x1, y: body.y1 };
+                    let board_hex_2 = BoardHex { color: player_hex_pair[1].clone(), x: body.x2, y: body.y2 };
+                    let progress_gained = calculate_progress_gained(board.read().to_vec(), [board_hex_1, board_hex_2]);
+                    let total_progress = progress_gained.clone().sum(player.read().progress.clone());
+                    // 3) increment progress values and check how many colors reaches genial, increment moves_in_turn if necessary
+                    let genial_count = COLORS.iter().fold(0, |mut acc, color| {
+                        acc += if total_progress.clone().is_genial(color.clone()) { 1 } else { 0 };
+                        acc
+                    });
+                    player.write().moves_in_turn += genial_count;
+                    player.write().progress = total_progress;
 
-                        let genial_count = COLORS.iter().fold(0, |acc, color| {
-                            acc
-                            // acc += if progress_gained.color]
-                        });
-
-                        let mut writable_board = board.write();
-                        writable_board.push(board_hex_1);
-                        writable_board.push(board_hex_2);
-                    }
-                    None => {
-                        let message = format!("game does not exist in boards state: {}", body.gameUuid);
-                        error_log(message.clone());
-                        return HttpResponse::BadRequest().body(message);
-                    }
+                    let mut writable_board = board.write();
+                    writable_board.push(board_hex_1);
+                    writable_board.push(board_hex_2);
+                }
+                None => {
+                    let message = format!("game does not exist in boards state: {}", body.gameUuid);
+                    error_log(message.clone());
+                    return HttpResponse::BadRequest().body(message);
                 }
             }
-            None => {
-                let message = format!("player {} does not have a hex pair in this slot index: {}", body.playerUuid, body.hexPairIndex);
-                error_log(message.clone());
-                return HttpResponse::BadRequest().body(message);
+
+            player.write().moves_in_turn -= 1;
+
+            if player.read().moves_in_turn == 0 {
             }
+        }
+        None => {
+            let message = format!("player {} does not have a hex pair in this slot index: {}", body.playerUuid, body.hexPairIndex);
+            error_log(message.clone());
+            return HttpResponse::BadRequest().body(message);
         }
     }
 
-
+    eprintln!("api_game_place_hex_pair, {:?}", data.players.read().get(&body.playerUuid).unwrap().read());
 
     /*
-        3) increment progress values and check how many colors reaches genial, increment moves_in_turn if necessary
-        4) if (moves_in_turn > 0) go to 1) else 5)
         5) draw random hex pairs from available hex pair list, insert into players hex pair list
         6) assign move to the next player
         7) ?

@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use serde::Serializer;
 use crate::game::HexPairsToBeDrawn;
+use crate::util::error_log;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Copy, Clone)]
 pub struct BoardHex {
@@ -87,6 +88,20 @@ impl Progress {
             Some(progress) => progress >= (&18).into(),
             None => false,
         }
+    }
+
+    pub fn sum(self, progress: Progress) -> Progress {
+        self.0.iter().fold(Progress::new(), |mut acc: Progress, (color, value)| {
+            match progress.0.get(color) {
+                Some(other_value) => {
+                    acc.0.insert(*color, (value + other_value).clamp(0, 18));
+                }
+                None => {
+                    error_log(format!("color {} does not have a value in Progress", color.as_str()));
+                }
+            }
+            return acc;
+        })
     }
 }
 
