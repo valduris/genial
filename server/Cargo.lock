@@ -829,6 +829,7 @@ dependencies = [
  "dotenv",
  "futures",
  "futures-util",
+ "lazy_static",
  "parking_lot",
  "rand",
  "serde",

@@ -87,4 +87,6 @@ const NAMES: &[&str] = &[
     "žāva",
     "urķis",
     "plaudis",
+    "pļurkšķis",
+    "murrā kā rukšķis",
 ];

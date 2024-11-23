@@ -5,7 +5,7 @@ use std::ops::Deref;
 use std::ptr::read;
 use std::rc::Rc;
 use std::sync::{Arc};
-use tokio::sync::RwLock;
+use parking_lot::RwLock;
 use actix_web::{Responder, web, HttpResponse};
 use actix_web::{error::ResponseError, http::StatusCode};
 use actix_web::cookie::time::macros::date;
@@ -21,7 +21,7 @@ use sqlx::postgres::PgQueryResult;
 use sqlx::types::JsonValue;
 use uuid::Uuid;
 
-use crate::types::{Game, Player, Board};
+use crate::types::{Game, Player, Board, Progress};
 use crate::AppState;
 use crate::util::{error_log, get_random_name, handle_postgres_query_result};
 use crate::game::HexPairsToBeDrawn;
@@ -48,7 +48,7 @@ pub async fn load_existing_games_from_database(data: &web::Data<AppState>) {
     }
     let query = "SELECT admin_uuid, name, uuid, board_size, player_count, show_progress, status FROM game";
     let rows: Vec<LoadGameFromDb> = sqlx::query_as(query).fetch_all(&data.postgres_pool).await.unwrap();
-    let mut games = data.games.write().await;
+    let mut games = data.games.write();
 
     rows.iter().for_each(|r| {
         let game_uuid = Uuid::parse_str(r.uuid.as_str()).unwrap();
@@ -81,7 +81,7 @@ pub async fn api_game_create(body: web::Json<CreateGameSchema>, data: web::Data<
     //     .execute(&data.postgres_pool)
     //     .await;
 
-    data.boards.write().await.insert(uuid, Board(vec![]));
+    data.boards.write().insert(uuid, Arc::new(RwLock::new(Vec::new())));
 
     let game: Game = Game {
         first_move_player_index: None, // rand::thread_rng().gen_range(0..body.playerCount as u8), // TODO determine at game start
@@ -110,7 +110,7 @@ pub async fn api_game_create(body: web::Json<CreateGameSchema>, data: web::Data<
         // })])
     };
 
-    data.games.write().await.insert(uuid, game);
+    data.games.write().insert(uuid, game);
 
     data.broadcaster.broadcast(json!({ "type": "game_created", "game": {
         "name": body.name,
@@ -148,8 +148,8 @@ pub async fn api_get_games(state: web::Data<AppState>) -> HttpResponse {
         players: Vec<ApiGetGamesPlayer>,
     }
 
-    let players = state.players.read().await;
-    let data: Vec<ApiGetGames> = state.games.read().await.iter().map(|(k, v)| {
+    // let players = state.players.read();
+    let data: Vec<ApiGetGames> = state.games.read().iter().map(|(_, v)| {
         ApiGetGames {
             uuid: v.uuid,
             name: v.name.clone(),
@@ -157,14 +157,15 @@ pub async fn api_get_games(state: web::Data<AppState>) -> HttpResponse {
             playerCount: v.player_count,
             showProgress: v.show_progress,
             status: v.status.clone(),
-            players: v.players.iter().map(|uuid| async {
-                let player = players.get(&uuid).unwrap().read().await;
-                ApiGetGamesPlayer {
-                    ready: player.ready,
-                    id: player.id,
-                    name: player.name.clone(),
-                }
-            }).collect(),
+            players: Vec::new(),
+            // v.players.iter().map(|uuid| async {
+            //     let player = players.get(&uuid).unwrap().read();
+            //     ApiGetGamesPlayer {
+            //         ready: player.ready,
+            //         id: player.id,
+            //         name: player.name.clone(),
+            //     }
+            // }).collect(),
         }
     }).collect();
 
@@ -198,22 +199,22 @@ pub async fn api_get_lobby_game(body: web::Json<ApiLobbyGameSchema>, state: web:
         name: String,
     }
 
-    let players = state.players.read().await;
-    if let Some(game) = state.games.read().await.get(&body.gameUuid) {
-        let tasks = game.players.iter().map(|uuid| tokio::spawn(async move {
-            let player = players.get(&uuid).unwrap().read().await;
-            ApiLobbyGamePlayer {
-                ready: player.ready,
-                id: player.id,
-                name: player.name.clone(),
-            }
-        })).collect::<FuturesUnordered<_>>();
-
-        let players: Vec<_> = futures::future::join_all(tasks).await.iter().filter(|r| {
-            r.is_ok()
-        }).map(|r| {
-            r.unwrap()
-        }).collect();
+    // let players = state.players.read();
+    if let Some(game) = state.games.read().get(&body.gameUuid) {
+        // let tasks = game.players.iter().map(|uuid| tokio::spawn(async move {
+        //     let player = players.get(&uuid).unwrap().read();
+        //     ApiLobbyGamePlayer {
+        //         ready: player.ready,
+        //         id: player.id,
+        //         name: player.name.clone(),
+        //     }
+        // })).collect::<FuturesUnordered<_>>();
+        //
+        // let players: Vec<_> = futures::future::join_all(tasks).await.iter().filter(|r| {
+        //     r.is_ok()
+        // }).map(|r| {
+        //     r.unwrap()
+        // }).collect();
             // .iter().map(|r| {
             // Ok(r);
         // }).collect();
@@ -225,14 +226,15 @@ pub async fn api_get_lobby_game(body: web::Json<ApiLobbyGameSchema>, state: web:
             playerCount: game.player_count,
             showProgress: game.show_progress,
             status: game.status.clone(),
-            players: game.players.iter().map(|uuid| async {
-                let player = players.get(&uuid).unwrap().read().await;
-                ApiLobbyGamePlayer {
-                    ready: player.ready,
-                    id: player.id,
-                    name: player.name.clone(),
-                }
-            }).collect(),
+            players: Vec::new(),
+            // game.players.iter().map(|uuid| async {
+            //     let player = players.get(&uuid).unwrap().read();
+            //     ApiLobbyGamePlayer {
+            //         ready: player.ready,
+            //         id: player.id,
+            //         name: player.name.clone(),
+            //     }
+            // }).collect(),
         };
 
         HttpResponse::Ok().json(json!(data))
@@ -263,25 +265,28 @@ pub async fn api_lobby_game_join(body: web::Json<GameJoinSchema>, data: web::Dat
         return HttpResponse::BadRequest().body(message);
     }
 
-    let players_read_lock = data.players.read().await;
+    let players_read_lock = data.players.read();
 
     if !players_read_lock.contains_key(&body.playerUuid) {
         drop(players_read_lock);
-        data.players.write().await.insert(body.playerUuid, Arc::new(RwLock::new(Player {
+        data.players.write().insert(body.playerUuid, Arc::new(RwLock::new(Player {
             name: get_random_name(),
             ready: false,
             uuid: body.playerUuid,
             id: upsert_result.unwrap().id,
             game_uuid: body.gameUuid.into(),
+            hex_pairs: Vec::new(),
+            moves_in_turn: 0,
+            progress: Progress::new(),
         })));
     } else {
-        let mut player = players_read_lock.get(&body.playerUuid).unwrap().write().await;
+        let mut player = players_read_lock.get(&body.playerUuid).unwrap().write();
 
         player.game_uuid = Some(body.gameUuid.clone());
         player.ready = false;
     }
 
-    eprintln!("{:?}", data.players.read().await.get(&body.playerUuid).unwrap().read().await);
+    eprintln!("{:?}", data.players.read().get(&body.playerUuid).unwrap().read());
 
     #[derive(Serialize)]
     struct ApiGameJoin {
@@ -297,16 +302,17 @@ pub async fn api_lobby_game_join(body: web::Json<GameJoinSchema>, data: web::Dat
         name: String,
     }
 
-    if let Some(game) = data.games.read().await.get(&body.gameUuid) {
+    if let Some(game) = data.games.read().get(&body.gameUuid) {
         let payload = ApiGameJoin {
             game_uuid: game.uuid.into(),
-            players: game.players.iter().map(|(k, v)| {
-                ApiGameJoinPlayer {
-                    ready: v.ready,
-                    id: v.id,
-                    name: v.name.clone(),
-                }
-            }).collect(),
+            players: Vec::new(),
+            // game.players.iter().map(|(k, v)| {
+            //     ApiGameJoinPlayer {
+            //         ready: v.ready,
+            //         id: v.id,
+            //         name: v.name.clone(),
+            //     }
+            // }).collect(),
         };
 
         // eprintln!("players {}", data.players);
@@ -356,7 +362,7 @@ pub async fn api_lobby_player_ready(body: web::Json<ApiPlayerReadySchema>, data:
     // "#).fetch_one(&data.postgres_pool).await.unwrap();
 
     // data.players.read().unwrap().get(&body.playerUuid).unwrap().read().unwrap().name;
-    data.players.read().await.get(&body.playerUuid).unwrap().write().await.ready = body.ready;
+    data.players.read().get(&body.playerUuid).unwrap().write().ready = body.ready;
 
 
     // if (all players ready) {
@@ -365,10 +371,10 @@ pub async fn api_lobby_player_ready(body: web::Json<ApiPlayerReadySchema>, data:
     //     deal random hexys from drawables to all players
     // }
 
-    let player_uuids: Vec<Uuid> = data.games.read().await.get(&body.gameUuid).unwrap().players.clone().into_iter().map(|(_, v)| v.uuid).collect();
+    // let player_uuids: Vec<Uuid> = data.games.read().get(&body.gameUuid).unwrap().players.clone().into_iter().map(|(_, v)| v.uuid).collect();
 
     println!("player {} is ready? {}", body.playerUuid, body.ready);
-    println!("player_uuids {:?} ", player_uuids);
+    // println!("player_uuids {:?} ", player_uuids);
 
     return HttpResponse::Ok().json(json!({ "type": "player_ready" }));
 

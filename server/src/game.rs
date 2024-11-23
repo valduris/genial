@@ -1,44 +1,30 @@
+use std::iter::Iterator;
+use std::ops::Deref;
 use std::sync::Arc;
 use serde::Serialize;
-use crate::types::{Board, BoardHex, BoardHexPair, Color, HexPair, Point};
+use crate::types::{Board, BoardHex, BoardHexPair, Color, HexPair, Point, Progress};
 use crate::util::error_log;
+use lazy_static::lazy_static;
 
-#[derive(Serialize)]
-pub struct HexPairsToBeDrawn {
-    pub pairs: Arc<Vec<HexPair>>,
+lazy_static! {
+    static ref COLORS: Vec<Color> = {
+        vec![Color::Red, Color::Blue, Color::Green, Color::Orange, Color::Yellow, Color::Violet]
+    };
+
+    static ref SPECIAL_CORNER_COORDINATES: Vec<(i8, i8)> = {
+        vec![(-6, 0), (0, -6), (6, 0), (-6, 6), (0, 6), (6, -6)]
+    };
+
+    static ref SPECIAL_CORNERS: Vec<BoardHex> = {
+        SPECIAL_CORNER_COORDINATES.iter().enumerate().map(|(index, point)| {
+            BoardHex { x: point.0, y: point.1, color: COLORS[index] }
+        }).collect()
+    };
+
+    static ref DIRECTIONS: Vec<(i8, i8)> = {
+        SPECIAL_CORNER_COORDINATES.iter().map(|pair| (pair.0 / 6, pair.1 / 6)).collect()
+    };
 }
-
-impl HexPairsToBeDrawn {
-    pub fn new() -> HexPairsToBeDrawn {
-        HexPairsToBeDrawn {
-            pairs: Arc::new(vec![
-                 HexPair(Color::Red, Color::Blue),
-                 HexPair(Color::Red, Color::Orange),
-                 HexPair(Color::Red, Color::Violet),
-                 HexPair(Color::Green, Color::Blue),
-                 HexPair(Color::Violet, Color::Blue),
-                 HexPair(Color::Violet, Color::Violet),
-                 HexPair(Color::Violet, Color::Orange),
-                 HexPair(Color::Red, Color::Orange),
-                 HexPair(Color::Red, Color::Yellow),
-                 HexPair(Color::Yellow, Color::Yellow),
-            ])
-        }
-    }
-    // pub fn take_random_hex_pair(self) -> HexPair {
-        // let index = (rand::random::<f32>() * self.pairs.len() as f32).floor() as usize;
-        // let value = self.pairs.get_mut().remove(index);
-        // self.pairs.
-        // value
-    // }
-}
-
-// #[test]
-// fn takes_random_hex_and_removes_from_vec() {
-//     let pairs = HexPairsToBeDrawn::new();
-//     pairs.take_random_hex_pair();
-//     assert_eq!(pairs.pairs.take().len(), 10)
-// }
 
 pub fn get_cols_by_row(row: i8, board_size: i8) -> i8 {
     board_size * 2 - 1 + (row * (if row > 0 { -1 } else { 1 }))
@@ -56,6 +42,75 @@ pub fn is_coordinate_valid(point: Point, board_size: i8) -> bool {
     let x_max = get_cols_by_row(row, board_size) -x_min.abs() + 1;
     
     col >= x_min && col <= x_max
+}
+
+pub fn get_next_point_in_direction(point: Point, direction: (i8, i8) /* [-1, 0] | [0, -1] | [1, 0] | [-1, 1] | [0, 1] | [1, -1] */) -> Point {
+    Point {
+        x: point.x + 1 * direction.0,
+        y: point.y + 1 * direction.1,
+    }
+}
+
+pub fn get_color_by_point(board: &Vec<BoardHex>, point: Point) -> Option<Color> {
+    let board_hex: Option<&BoardHex> = board.iter().find(|board_hex| {
+        board_hex.x == point.x && board_hex.y == point.y
+    });
+
+    if board_hex.is_none() {
+         match get_special_hex_point_by_point(&point) {
+             Some(point) => {
+                 return Some(point.color);
+             }
+             None => {
+                 return None::<Color>;
+             }
+         }
+    }
+
+    board_hex?.color.into()
+}
+
+pub fn calculate_progress_gained(board: Vec<BoardHex>, hex_pair: BoardHexPair) -> Progress {
+    // let mut progress_gained: Progress = hex_pair.reduce((outerMemo: Progress, hexy) => {
+    //     return DIRECTIONS.reduce((progress, direction) => {
+    //         for (
+    //             let tempPoint: Point = getNextPointInDirection(hexy, direction),
+    //             color = getColorByPoint(game.hexyPairs, tempPoint);
+    //             color === hexy.color;
+    //             progress[color] += 1,
+    //             tempPoint = getNextPointInDirection(tempPoint, direction),
+    //             color = getColorByPoint(game.hexyPairs, tempPoint)
+    //         );
+    //         return progress;
+    //     }, outerMemo);
+    // }, Progress::new());
+
+    let mut progress_gained: Progress = Progress::new();
+    [0, 1].iter().for_each(|i| {
+        DIRECTIONS.iter().for_each(|direction| {
+            let mut temp_point = get_next_point_in_direction(Point { x: hex_pair[i].x, y: hex_pair.0.y }, *direction);
+            loop {
+                let color = get_color_by_point(&board, temp_point.clone());
+
+                if color.is_some() && color.unwrap() == hex_pair.0.color {
+                    match color.unwrap() {
+                        Color::Red => progress_gained.red += 1,
+                        Color::Yellow => progress_gained.yellow += 1,
+                        Color::Orange => progress_gained.orange += 1,
+                        Color::Violet => progress_gained.violet += 1,
+                        Color::Green => progress_gained.green += 1,
+                        Color::Blue => progress_gained.blue += 1,
+                    }
+                } else {
+                    break;
+                }
+
+                temp_point = get_next_point_in_direction(temp_point, *direction);
+            }
+        });
+    });
+
+    return progress_gained;
 }
 
 // pub fn getNeighboringHexysOf(of: Pick<BoardHexy, "x" | "y">, game: Pick<Game, "hexyPairs" | "boardSize">): (BoardHexy | Point)[] {
@@ -129,3 +184,40 @@ pub fn is_valid_hex_pair_placement(hex_pairs: &Vec<BoardHexPair>, hex_pair: Boar
         }
     )
 }
+
+#[derive(Serialize)]
+pub struct HexPairsToBeDrawn {
+    pub pairs: Arc<Vec<HexPair>>,
+}
+
+impl HexPairsToBeDrawn {
+    pub fn new() -> HexPairsToBeDrawn {
+        HexPairsToBeDrawn {
+            pairs: Arc::new(vec![
+                HexPair(Color::Red, Color::Blue),
+                HexPair(Color::Red, Color::Orange),
+                HexPair(Color::Red, Color::Violet),
+                HexPair(Color::Green, Color::Blue),
+                HexPair(Color::Violet, Color::Blue),
+                HexPair(Color::Violet, Color::Violet),
+                HexPair(Color::Violet, Color::Orange),
+                HexPair(Color::Red, Color::Orange),
+                HexPair(Color::Red, Color::Yellow),
+                HexPair(Color::Yellow, Color::Yellow),
+            ])
+        }
+    }
+    // pub fn take_random_hex_pair(self) -> HexPair {
+    // let index = (rand::random::<f32>() * self.pairs.len() as f32).floor() as usize;
+    // let value = self.pairs.get_mut().remove(index);
+    // self.pairs.
+    // value
+    // }
+}
+
+// #[test]
+// fn takes_random_hex_and_removes_from_vec() {
+//     let pairs = HexPairsToBeDrawn::new();
+//     pairs.take_random_hex_pair();
+//     assert_eq!(pairs.pairs.take().len(), 10)
+// }

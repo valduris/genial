@@ -11,11 +11,10 @@ import {
 } from "../selectors";
 import { HexyComponent } from "./Hexy";
 import {
-    Genial, PlayerHexyPair, Point, ProgressValue, Thunk, BoardHexyPair, BoardSize
+    Genial, Point, ProgressValue, Thunk, BoardHexyPair, BoardSize
 } from "../types";
 import { setGenialState } from "../index";
 import { COLORS } from "../consts";
-import {onPlayerHexyPairClick} from "../GenialUi";
 
 export interface BoardStateProps {
     game: Genial["game"];

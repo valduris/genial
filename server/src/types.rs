@@ -2,14 +2,14 @@ use std::collections::HashMap;
 use std::io::Read;
 use std::ops::Deref;
 use std::sync::{Arc};
-use tokio::sync::RwLock;
+use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 // use serde_json::SerializerSerializer;
 use uuid::Uuid;
 use serde::Serializer;
 use crate::game::HexPairsToBeDrawn;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct BoardHex {
     pub x: i8,
     pub y: i8,
@@ -21,7 +21,7 @@ pub struct PlayerHex {
     color: Color,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Copy)]
 pub enum Color {
     Red,
     Yellow,
@@ -32,7 +32,7 @@ pub enum Color {
 }
 
 impl Color {
-    fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             Color::Red => "red",
             Color::Yellow => "yellow",
@@ -60,43 +60,38 @@ pub struct Player {
     pub progress: Progress,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProgressValue(pub u16);
-// https://stackoverflow.com/questions/27673674/is-there-a-way-to-create-a-data-type-that-only-accepts-a-range-of-values
-
-impl ProgressValue {
-    fn new(progressValue: u16) -> Option<ProgressValue> {
-        if progressValue > 0 && progressValue < 19 {
-            Some(ProgressValue(progressValue))
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Progress {
-    pub red: ProgressValue,
-    pub yellow: ProgressValue,
-    pub orange: ProgressValue,
-    pub blue: ProgressValue,
-    pub green: ProgressValue,
-    pub violet: ProgressValue,
+    pub red: u8,
+    pub yellow: u8,
+    pub orange: u8,
+    pub blue: u8,
+    pub green: u8,
+    pub violet: u8,
 }
 
 impl Progress {
     pub fn new() -> Progress {
         Progress {
-            red: ProgressValue(0),
-            yellow: ProgressValue(0),
-            orange: ProgressValue(0),
-            blue: ProgressValue(0),
-            green: ProgressValue(0),
-            violet: ProgressValue(0),
+            red: 0,
+            yellow: 0,
+            orange: 0,
+            blue: 0,
+            green: 0,
+            violet: 0,
         }
     }
+
+    pub fn increment(&mut self, color: Color) {
+        self.blue += 1;
+    }
+
+    // pub fn is_genial(self, color: Color) -> bool {
+    //     self[color] == 18
+    // }
 }
 
+#[derive(PartialEq, Clone)]
 pub struct Point {
     pub x: i8,
     pub y: i8,
@@ -126,9 +121,9 @@ pub struct Game {
     pub players: Vec<Uuid>,
 }
 
-pub struct Board(pub Vec<BoardHex>);
+pub type Board = Vec<BoardHex>;
 
-pub type Boards = Arc<RwLock<HashMap<Uuid, Board>>>;
+pub type Boards = Arc<RwLock<HashMap<Uuid, Arc<RwLock<Board>>>>>;
 
 // impl Default for Boards {
 //     fn default() -> Self {
