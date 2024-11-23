@@ -80,14 +80,7 @@ pub fn calculate_progress_gained(board: Board, hex_pair: BoardHexPair) -> Progre
                 let color = get_color_by_point(&board, temp_point.clone());
 
                 if color.is_some() && color.unwrap() == hex_pair[0].color {
-                    match color.unwrap() {
-                        Color::Red => progress_gained.red += 1,
-                        Color::Yellow => progress_gained.yellow += 1,
-                        Color::Orange => progress_gained.orange += 1,
-                        Color::Violet => progress_gained.violet += 1,
-                        Color::Green => progress_gained.green += 1,
-                        Color::Blue => progress_gained.blue += 1,
-                    }
+                    progress_gained.increment(color.unwrap());
                 } else {
                     break;
                 }

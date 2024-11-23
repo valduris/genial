@@ -21,7 +21,7 @@ pub struct PlayerHex {
     color: Color,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Copy)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Copy, Hash, Eq)]
 pub enum Color {
     Red,
     Yellow,
@@ -61,34 +61,33 @@ pub struct Player {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Progress {
-    pub red: u8,
-    pub yellow: u8,
-    pub orange: u8,
-    pub blue: u8,
-    pub green: u8,
-    pub violet: u8,
-}
+pub struct Progress(HashMap<Color, u8>);
 
 impl Progress {
     pub fn new() -> Progress {
-        Progress {
-            red: 0,
-            yellow: 0,
-            orange: 0,
-            blue: 0,
-            green: 0,
-            violet: 0,
-        }
+        Progress(HashMap::from([
+            (Color::Red, 0),
+            (Color::Yellow, 0),
+            (Color::Orange, 0),
+            (Color::Blue, 0),
+            (Color::Green, 0),
+            (Color::Violet, 0),
+        ]))
     }
 
     pub fn increment(&mut self, color: Color) {
-        self.blue += 1;
+        match self.0.get(&color) {
+            Some(i) => self.0.insert(color, i + 1),
+            None => self.0.insert(color, 1),
+        };
     }
 
-    // pub fn is_genial(self, color: Color) -> bool {
-    //     self[color] == 18
-    // }
+    pub fn is_genial(self, color: Color) -> bool {
+        match self.0.get(&color) {
+            Some(progress) => progress >= (&18).into(),
+            None => false,
+        }
+    }
 }
 
 #[derive(PartialEq, Clone)]
