@@ -9,7 +9,7 @@ use uuid::Uuid;
 use serde::Serializer;
 use crate::game::HexPairsToBeDrawn;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Copy, Clone)]
 pub struct BoardHex {
     pub x: i8,
     pub y: i8,
@@ -97,11 +97,9 @@ pub struct Point {
     pub y: i8,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct BoardHexPair(pub BoardHex, pub BoardHex);
+pub type BoardHexPair = [BoardHex; 2];
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HexPair(pub Color, pub Color);
+pub type HexPair = [Color; 2];
 
 pub type HexPairs = Vec<HexPair>;
 

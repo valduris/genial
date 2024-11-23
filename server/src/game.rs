@@ -7,7 +7,7 @@ use crate::util::error_log;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref COLORS: Vec<Color> = {
+    pub static ref COLORS: Vec<Color> = {
         vec![Color::Red, Color::Blue, Color::Green, Color::Orange, Color::Yellow, Color::Violet]
     };
 
@@ -70,29 +70,16 @@ pub fn get_color_by_point(board: &Vec<BoardHex>, point: Point) -> Option<Color> 
     board_hex?.color.into()
 }
 
-pub fn calculate_progress_gained(board: Vec<BoardHex>, hex_pair: BoardHexPair) -> Progress {
-    // let mut progress_gained: Progress = hex_pair.reduce((outerMemo: Progress, hexy) => {
-    //     return DIRECTIONS.reduce((progress, direction) => {
-    //         for (
-    //             let tempPoint: Point = getNextPointInDirection(hexy, direction),
-    //             color = getColorByPoint(game.hexyPairs, tempPoint);
-    //             color === hexy.color;
-    //             progress[color] += 1,
-    //             tempPoint = getNextPointInDirection(tempPoint, direction),
-    //             color = getColorByPoint(game.hexyPairs, tempPoint)
-    //         );
-    //         return progress;
-    //     }, outerMemo);
-    // }, Progress::new());
-
+pub fn calculate_progress_gained(board: Board, hex_pair: BoardHexPair) -> Progress {
     let mut progress_gained: Progress = Progress::new();
-    [0, 1].iter().for_each(|i| {
+
+    [0, 1].iter().for_each(|i: &usize| {
         DIRECTIONS.iter().for_each(|direction| {
-            let mut temp_point = get_next_point_in_direction(Point { x: hex_pair[i].x, y: hex_pair.0.y }, *direction);
+            let mut temp_point = get_next_point_in_direction(Point { x: hex_pair[*i].x, y: hex_pair[0].y }, *direction);
             loop {
                 let color = get_color_by_point(&board, temp_point.clone());
 
-                if color.is_some() && color.unwrap() == hex_pair.0.color {
+                if color.is_some() && color.unwrap() == hex_pair[0].color {
                     match color.unwrap() {
                         Color::Red => progress_gained.red += 1,
                         Color::Yellow => progress_gained.yellow += 1,
@@ -110,7 +97,7 @@ pub fn calculate_progress_gained(board: Vec<BoardHex>, hex_pair: BoardHexPair) -
         });
     });
 
-    return progress_gained;
+    progress_gained
 }
 
 // pub fn getNeighboringHexysOf(of: Pick<BoardHexy, "x" | "y">, game: Pick<Game, "hexyPairs" | "boardSize">): (BoardHexy | Point)[] {
@@ -122,14 +109,6 @@ pub fn calculate_progress_gained(board: Vec<BoardHex>, hex_pair: BoardHexPair) -
 //          return memo.concat(boardHexy ? [boardHexy] : isCoordinateValid(point, game.boardSize) ? [point] : []);
 //     }, []);
 // }
-//
-// pub const SPECIAL_CORNER_COORDINATES = [[-6, 0], [0, -6], [6, 0], [-6, 6], [0, 6], [6, -6]];
-//
-// pub const SPECIAL_CORNERS: SpecialCorners = SPECIAL_CORNER_COORDINATES.reduce((memo: SpecialCorners, point, index) => {
-//     return memo.concat([createHexy(point[0], point[1], COLORS[index])]) as SpecialCorners;
-// }, [] as unknown as SpecialCorners);
-//
-// pub const DIRECTIONS: Direction[] = SPECIAL_CORNER_COORDINATES.map(pair => [pair[0] / 6, pair[1] / 6] as Direction);
 //
 // pub fn areNeighbors(first: BoardHexy | Point, second: Point): boolean {
 //     return DIRECTIONS.some(direction => {
@@ -156,7 +135,7 @@ pub fn is_point_special(point: &Point) -> bool {
 }
 
 pub fn is_point_covered_with_hex(hex_pairs: &Vec<BoardHexPair>, point: &Point) -> bool {
-    hex_pairs.into_iter().any(|hex_pair| (hex_pair.0.x == point.x && hex_pair.0.y == point.y) || (hex_pair.1.x == point.x && hex_pair.1.y == point.y))
+    hex_pairs.into_iter().any(|hex_pair| (hex_pair[0].x == point.x && hex_pair[0].y == point.y) || (hex_pair[1].x == point.x && hex_pair[1].y == point.y))
 }
 
 pub fn equal_colors(board_hex_1: BoardHex, board_hex_2: BoardHex) -> bool {
@@ -164,21 +143,21 @@ pub fn equal_colors(board_hex_1: BoardHex, board_hex_2: BoardHex) -> bool {
 }
 
 pub fn is_valid_hex_pair_placement(hex_pairs: &Vec<BoardHexPair>, hex_pair: BoardHexPair) -> bool {
-    let p1: Point = Point { x: hex_pair.0.x, y: hex_pair.0.y };
-    let p2: Point = Point { x: hex_pair.1.x, y: hex_pair.1.y };
+    let p1: Point = Point { x: hex_pair[0].x, y: hex_pair[0].y };
+    let p2: Point = Point { x: hex_pair[1].x, y: hex_pair[1].y };
 
     // special ? not_covered && matches_color : not_covered =>
     // not_covered && special ? matches_color : true
     (!is_point_covered_with_hex(hex_pairs, &p1) && if is_point_special(&p1) {
         let special_hex = get_special_hex_point_by_point(&p1);
         // assert!(special_hex.is_some(), error_log(format!("special hex not found for point ...")));
-        equal_colors(hex_pair.0, special_hex.unwrap())
+        equal_colors(hex_pair[0], special_hex.unwrap())
     } else {
         true
     }) && (!is_point_covered_with_hex(hex_pairs, &p2) && if is_point_special(&p2) {
         let special_hex = get_special_hex_point_by_point(&p2);
         // assert!(special_hex.is_some(), error_log(format!("special hex not found for point ...")));
-        equal_colors(hex_pair.1, special_hex.unwrap())
+        equal_colors(hex_pair[1], special_hex.unwrap())
         } else {
             true
         }
@@ -194,16 +173,16 @@ impl HexPairsToBeDrawn {
     pub fn new() -> HexPairsToBeDrawn {
         HexPairsToBeDrawn {
             pairs: Arc::new(vec![
-                HexPair(Color::Red, Color::Blue),
-                HexPair(Color::Red, Color::Orange),
-                HexPair(Color::Red, Color::Violet),
-                HexPair(Color::Green, Color::Blue),
-                HexPair(Color::Violet, Color::Blue),
-                HexPair(Color::Violet, Color::Violet),
-                HexPair(Color::Violet, Color::Orange),
-                HexPair(Color::Red, Color::Orange),
-                HexPair(Color::Red, Color::Yellow),
-                HexPair(Color::Yellow, Color::Yellow),
+                [Color::Red, Color::Blue],
+                [Color::Red, Color::Orange],
+                [Color::Red, Color::Violet],
+                [Color::Green, Color::Blue],
+                [Color::Violet, Color::Blue],
+                [Color::Violet, Color::Violet],
+                [Color::Violet, Color::Orange],
+                [Color::Red, Color::Orange],
+                [Color::Red, Color::Yellow],
+                [Color::Yellow, Color::Yellow],
             ])
         }
     }

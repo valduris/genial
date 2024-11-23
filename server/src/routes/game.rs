@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
 use crate::AppState;
+use crate::game::{calculate_progress_gained, COLORS};
 use crate::types::{BoardHex, BoardHexPair, Color, HexPair, Player};
 use crate::util::error_log;
 
@@ -34,13 +35,20 @@ pub async fn api_game_place_hex_pair(body: web::Json<PlaceHexPairSchema>, data: 
             Some(player_hex_pair) => {
                 player_hex_pairs.remove(body.hexPairIndex);
 
-                // calcu
-
                 match data.boards.read().get(&body.gameUuid) {
                     Some(board) => {
+                        let board_hex_1 = BoardHex { color: player_hex_pair[0].clone(), x: body.x1, y: body.y1 };
+                        let board_hex_2 = BoardHex { color: player_hex_pair[1].clone(), x: body.x2, y: body.y2 };
+                        let progress_gained = calculate_progress_gained(board.read().to_vec(), [board_hex_1, board_hex_2]);
+
+                        let genial_count = COLORS.iter().fold(0, |acc, color| {
+                            acc
+                            // acc += if progress_gained.color]
+                        });
+
                         let mut writable_board = board.write();
-                        writable_board.push(BoardHex { color: player_hex_pair.0.clone(), x: body.x1, y: body.y1 });
-                        writable_board.push(BoardHex { color: player_hex_pair.1.clone(), x: body.x2, y: body.y2 });
+                        writable_board.push(board_hex_1);
+                        writable_board.push(board_hex_2);
                     }
                     None => {
                         let message = format!("game does not exist in boards state: {}", body.gameUuid);
