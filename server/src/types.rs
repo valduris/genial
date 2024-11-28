@@ -1,13 +1,10 @@
 use std::collections::HashMap;
-use std::io::Read;
-use std::ops::Deref;
 use std::sync::{Arc};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
-// use serde_json::SerializerSerializer;
 use uuid::Uuid;
 use serde::Serializer;
-use crate::game::HexPairsToBeDrawn;
+use crate::game::HexPairsInBag;
 use crate::util::error_log;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Copy, Clone)]
@@ -45,7 +42,7 @@ impl Color {
     }
 }
 
-pub type Games = Arc<RwLock<HashMap<Uuid, Game>>>;
+pub type Games = Arc<RwLock<HashMap<Uuid, Arc<RwLock<Game>>>>>;
 
 pub type Players = Arc<RwLock<HashMap<Uuid, Arc<RwLock<Player>>>>>;
 
@@ -119,18 +116,22 @@ pub type HexPairs = Vec<HexPair>;
 
 pub type SpecialCorners = (BoardHex, BoardHex, BoardHex, BoardHex, BoardHex, BoardHex);
 
-#[derive(Serialize)]
+struct MoveTimer {
+    player_uuid: Uuid,
+    time_per_move: u16,
+}
+
 pub struct Game {
     pub admin_uuid: Uuid,
     pub board_size: i32,
-    pub hex_pairs_to_be_drawn: HexPairsToBeDrawn,
-    pub first_move_player_index: Option<u8>,
+    pub hex_pairs_in_bag: HexPairsInBag,
+    pub player_to_move: Option<Uuid>,
     pub name: String,
     pub show_progress: bool,
     pub status: String,
     pub uuid: Uuid,
     pub player_count: i8,
-    pub players: Vec<Uuid>,
+    pub players: Arc<RwLock<Vec<Uuid>>>, // ordered by move sequence
 }
 
 pub type Board = Vec<BoardHex>;

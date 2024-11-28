@@ -28,7 +28,7 @@ pub async fn api_game_place_hex_pair(body: web::Json<PlaceHexPairSchema>, data: 
         return HttpResponse::BadRequest().body(message);
     }
 
-    // 1) remove hex pair from players hex pair list and insert hex pair in board hex pair list
+    // remove hex pair from players hex pair list and insert hex pair in board hex pair list
     let player = data.players.read().get(&body.playerUuid).unwrap().clone();
     let mut player_hex_pairs = player.read().hex_pairs.clone();
     match player_hex_pairs.clone().get(body.hexPairIndex) {
@@ -41,7 +41,7 @@ pub async fn api_game_place_hex_pair(body: web::Json<PlaceHexPairSchema>, data: 
                     let board_hex_2 = BoardHex { color: player_hex_pair[1].clone(), x: body.x2, y: body.y2 };
                     let progress_gained = calculate_progress_gained(board.read().to_vec(), [board_hex_1, board_hex_2]);
                     let total_progress = progress_gained.clone().sum(player.read().progress.clone());
-                    // 3) increment progress values and check how many colors reaches genial, increment moves_in_turn if necessary
+                    // increment progress values and check how many colors reaches genial, increment moves_in_turn if necessary
                     let genial_count = COLORS.iter().fold(0, |mut acc, color| {
                         acc += if total_progress.clone().is_genial(color.clone()) { 1 } else { 0 };
                         acc
@@ -60,9 +60,17 @@ pub async fn api_game_place_hex_pair(body: web::Json<PlaceHexPairSchema>, data: 
                 }
             }
 
-            player.write().moves_in_turn -= 1;
+            let mut player_writable = player.write();
 
-            if player.read().moves_in_turn == 0 {
+            player_writable.moves_in_turn -= 1;
+
+            // draw random hex pairs from available hex pair list, insert into players hex pair list
+            if player_writable.moves_in_turn == 0 {
+                while player_writable.hex_pairs.len() < 6 {
+                    let hex_pair = games.get(&body.gameUuid).unwrap().read().hex_pairs_in_bag.clone().take_random_hex_pair();
+                    player_writable.hex_pairs.push(hex_pair);
+                }
+                // drop(player_writable);
             }
         }
         None => {
@@ -73,12 +81,6 @@ pub async fn api_game_place_hex_pair(body: web::Json<PlaceHexPairSchema>, data: 
     }
 
     eprintln!("api_game_place_hex_pair, {:?}", data.players.read().get(&body.playerUuid).unwrap().read());
-
-    /*
-        5) draw random hex pairs from available hex pair list, insert into players hex pair list
-        6) assign move to the next player
-        7) ?
-     */
 
 
     //

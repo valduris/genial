@@ -3,7 +3,6 @@
 
 use std::io::{Write};
 use std::io::prelude::*;
-use parking_lot::RwLock;
 use std::{time::Duration};
 use dotenv::dotenv;
 use actix_web::{http::header, Responder, web, App, HttpServer, HttpResponse };

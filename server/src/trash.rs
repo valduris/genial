@@ -1,5 +1,7 @@
 // https://stackoverflow.com/questions/27673674/is-there-a-way-to-create-a-data-type-that-only-accepts-a-range-of-values
 
+// rand::thread_rng().gen_range(0..3 as u8)
+
 // let Ok((id,)): Result<(i32,), Error> = sqlx::query_as(r#"INSERT INTO player (uuid, game_uuid) VALUES ($1, $2) ON CONFLICT (uuid) DO UPDATE SET game_uuid = $2 RETURNING id"#)
 //     .bind(body.playerUuid.clone())
 //     .bind(body.gameUuid.clone())
@@ -30,3 +32,22 @@
 //     GROUP BY g.id;
 // "#;
 // let rows: Vec<ApiGame> = sqlx::query_as(query).fetch_all(&state.postgres_pool).await.unwrap();
+
+// tokio RwLock
+// let tasks = game.players.iter().map(|uuid| tokio::spawn(async move {
+//     let player = players.get(&uuid).unwrap().read();
+//     ApiLobbyGamePlayer {
+//         ready: player.ready,
+//         id: player.id,
+//         name: player.name.clone(),
+//     }
+// })).collect::<FuturesUnordered<_>>();
+//
+// let players: Vec<_> = futures::future::join_all(tasks).await.iter().filter(|r| {
+//     r.is_ok()
+// }).map(|r| {
+//     r.unwrap()
+// }).collect();
+// .iter().map(|r| {
+// Ok(r);
+// }).collect();

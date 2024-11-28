@@ -7,13 +7,10 @@ use actix_web_lab::{
 };
 use futures_util::future;
 use parking_lot::Mutex;
-use serde_json::json;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use std::collections::HashMap;
-use serde::de::Unexpected::Option;
-use serde_json::Value::String;
-use uuid::{uuid, Uuid};
+use uuid::{Uuid};
 
 pub struct Broadcaster {
     inner: Mutex<BroadcasterInner>,

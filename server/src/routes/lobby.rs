@@ -13,10 +13,12 @@ use actix_web::rt::time::interval;
 use actix_web_lab::extract::Path;
 use futures_util::future::err;
 use futures_util::stream::FuturesUnordered;
-use rand::{Rng};
+use rand::{thread_rng, Rng};
+use rand::seq::SliceRandom;
 use sqlx::{Error, FromRow, Row};
 use serde_json::json;
 use serde::{Deserialize, Serialize};
+use sqlx::encode::IsNull::No;
 use sqlx::postgres::PgQueryResult;
 use sqlx::types::JsonValue;
 use uuid::Uuid;
@@ -24,7 +26,7 @@ use uuid::Uuid;
 use crate::types::{Game, Player, Board, Progress};
 use crate::AppState;
 use crate::util::{error_log, get_random_name, handle_postgres_query_result};
-use crate::game::HexPairsToBeDrawn;
+use crate::game::HexPairsInBag;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CreateGameSchema {
@@ -52,18 +54,18 @@ pub async fn load_existing_games_from_database(data: &web::Data<AppState>) {
 
     rows.iter().for_each(|r| {
         let game_uuid = Uuid::parse_str(r.uuid.as_str()).unwrap();
-        games.insert(game_uuid, Game {
+        games.insert(game_uuid, Arc::new(RwLock::new(Game {
             player_count: r.player_count as i8,
-            first_move_player_index: None, // rand::thread_rng().gen_range(0..3 as u8), // TODO determine at game start
+            player_to_move: None,
             admin_uuid: Uuid::parse_str(r.admin_uuid.as_str()).unwrap(),
             board_size: r.board_size,
-            hex_pairs_to_be_drawn: HexPairsToBeDrawn::new(),
+            hex_pairs_in_bag: HexPairsInBag::new(),
             name: r.name.clone(),
             show_progress: r.show_progress,
             status: r.status.clone(),
             uuid: game_uuid,
-            players: Vec::new(),
-        });
+            players: Arc::new(RwLock::new(Vec::new())),
+        })));
     });
 }
 
@@ -84,16 +86,16 @@ pub async fn api_game_create(body: web::Json<CreateGameSchema>, data: web::Data<
     data.boards.write().insert(uuid, Arc::new(RwLock::new(Vec::new())));
 
     let game: Game = Game {
-        first_move_player_index: None, // rand::thread_rng().gen_range(0..body.playerCount as u8), // TODO determine at game start
         player_count: body.playerCount as i8,
+        player_to_move: None,
         admin_uuid: body.playerUuid.clone(),
         board_size: body.boardSize,
-        hex_pairs_to_be_drawn: HexPairsToBeDrawn::new(),
+        hex_pairs_in_bag: HexPairsInBag::new(),
         name: body.name.clone(),
         show_progress: body.showProgress,
         status: "in_progress".to_string(),
         uuid: uuid,
-        players: Vec::new(),
+        players: Arc::new(RwLock::new(Vec::new())),
         // players: HashMap::from([(body.playerUuid.clone(), Player {
         //     uuid: body.playerUuid.clone(),
         //     name: "playerName".to_string(),
@@ -110,7 +112,7 @@ pub async fn api_game_create(body: web::Json<CreateGameSchema>, data: web::Data<
         // })])
     };
 
-    data.games.write().insert(uuid, game);
+    data.games.write().insert(uuid, Arc::new(RwLock::new(game)));
 
     data.broadcaster.broadcast(json!({ "type": "game_created", "game": {
         "name": body.name,
@@ -148,25 +150,26 @@ pub async fn api_get_games(state: web::Data<AppState>) -> HttpResponse {
         players: Vec<ApiGetGamesPlayer>,
     }
 
-    // let players = state.players.read();
-    let data: Vec<ApiGetGames> = state.games.read().iter().map(|(_, v)| {
-        ApiGetGames {
-            uuid: v.uuid,
-            name: v.name.clone(),
-            boardSize: v.board_size.into(),
-            playerCount: v.player_count,
-            showProgress: v.show_progress,
-            status: v.status.clone(),
-            players: Vec::new(),
-            // v.players.iter().map(|uuid| async {
-            //     let player = players.get(&uuid).unwrap().read();
-            //     ApiGetGamesPlayer {
-            //         ready: player.ready,
-            //         id: player.id,
-            //         name: player.name.clone(),
-            //     }
-            // }).collect(),
-        }
+    let players = state.players.read();
+    let data: Vec<ApiGetGames> = state.games.read().iter().map(|(_, game_lock)| {
+        let game = game_lock.read();
+        let api_game = ApiGetGames {
+            uuid: game.uuid,
+            name: game.name.clone(),
+            boardSize: game.board_size.into(),
+            playerCount: game.player_count,
+            showProgress: game.show_progress,
+            status: game.status.clone(),
+            players: game.players.read().iter().map(|uuid| {
+                let player = players.get(&uuid).unwrap().read();
+                ApiGetGamesPlayer {
+                    ready: player.ready,
+                    id: player.id,
+                    name: player.name.clone(),
+                }
+            }).collect(),
+        };
+        api_game
     }).collect();
 
     HttpResponse::Ok().json(json!(data))
@@ -200,24 +203,10 @@ pub async fn api_get_lobby_game(body: web::Json<ApiLobbyGameSchema>, state: web:
     }
 
     // let players = state.players.read();
-    if let Some(game) = state.games.read().get(&body.gameUuid) {
-        // let tasks = game.players.iter().map(|uuid| tokio::spawn(async move {
-        //     let player = players.get(&uuid).unwrap().read();
-        //     ApiLobbyGamePlayer {
-        //         ready: player.ready,
-        //         id: player.id,
-        //         name: player.name.clone(),
-        //     }
-        // })).collect::<FuturesUnordered<_>>();
-        //
-        // let players: Vec<_> = futures::future::join_all(tasks).await.iter().filter(|r| {
-        //     r.is_ok()
-        // }).map(|r| {
-        //     r.unwrap()
-        // }).collect();
-            // .iter().map(|r| {
-            // Ok(r);
-        // }).collect();
+    if let Some(game_lock) = state.games.read().get(&body.gameUuid) {
+
+
+        let game = game_lock.read();
 
         let data = ApiLobbyGame {
             uuid: game.uuid,
@@ -302,20 +291,36 @@ pub async fn api_lobby_game_join(body: web::Json<GameJoinSchema>, data: web::Dat
         name: String,
     }
 
+    let players = data.players.read().clone();
     if let Some(game) = data.games.read().get(&body.gameUuid) {
+        let game = game.read();
+        let mut game_players_write = game.players.write();
+        if !game_players_write.contains(&body.playerUuid) {
+            game_players_write.push(body.playerUuid);
+        }
+        drop(game_players_write);
+
         let payload = ApiGameJoin {
             game_uuid: game.uuid.into(),
-            players: Vec::new(),
-            // game.players.iter().map(|(k, v)| {
-            //     ApiGameJoinPlayer {
-            //         ready: v.ready,
-            //         id: v.id,
-            //         name: v.name.clone(),
-            //     }
-            // }).collect(),
+            players: game.players.read().iter().fold(Vec::new(), |mut acc, uuid| {
+                match players.get(&uuid) {
+                    Some(player_rwlock) => {
+                        let player = player_rwlock.read();
+                        acc.push(ApiGameJoinPlayer {
+                            ready: player.ready,
+                            id: player.id,
+                            name: player.name.clone(),
+                        });
+                    }
+                    None => {
+                        error_log(format!("Player not found while joining the game: {}", &uuid));
+                    }
+                }
+                acc
+            }).into_iter().collect(),
         };
 
-        // eprintln!("players {}", data.players);
+        eprintln!("players {:?}", data.players.read().iter().collect::<Vec<_>>());
 
         data.broadcaster.broadcast(json!({ "type": "player_joined", "value": payload }).to_string().as_str()).await;
 
@@ -361,16 +366,34 @@ pub async fn api_lobby_player_ready(body: web::Json<ApiPlayerReadySchema>, data:
     //     GROUP BY g.uuid
     // "#).fetch_one(&data.postgres_pool).await.unwrap();
 
-    // data.players.read().unwrap().get(&body.playerUuid).unwrap().read().unwrap().name;
     data.players.read().get(&body.playerUuid).unwrap().write().ready = body.ready;
+    match data.games.read().get(&body.gameUuid) {
+        Some(game) => {
+            let game_read = game.read();
+            let game_players_write = game_read.players.clone().write();
+            // if all players are ready, shuffle player uuid vec, pick a random index and assign move, next player = index + 1 (wraps)
+            if game_players_write.iter().all(|uuid| {
+                data.players.read().get(uuid).unwrap().read().ready
+            }) {
+                game_players_write.clone().shuffle(&mut thread_rng());
+                drop(game_read);
 
+                let game_write = game.write();
+                game_write.player_to_move = game_players_write.choose(&mut thread_rng()).into();
+            }
+        }
+        None => {
+            let message = format!("Game not found with uuid: {}", &body.gameUuid);
+            error_log(message.clone());
+            return HttpResponse::BadRequest().body(message);
+        }
+    }
 
     // if (all players ready) {
     //     assign move to player randomly
     //     start timer
     //     deal random hexys from drawables to all players
     // }
-
     // let player_uuids: Vec<Uuid> = data.games.read().get(&body.gameUuid).unwrap().players.clone().into_iter().map(|(_, v)| v.uuid).collect();
 
     println!("player {} is ready? {}", body.playerUuid, body.ready);
