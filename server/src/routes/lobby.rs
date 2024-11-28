@@ -370,16 +370,17 @@ pub async fn api_lobby_player_ready(body: web::Json<ApiPlayerReadySchema>, data:
     match data.games.read().get(&body.gameUuid) {
         Some(game) => {
             let game_read = game.read();
-            let game_players_write = game_read.players.clone().write();
-            // if all players are ready, shuffle player uuid vec, pick a random index and assign move, next player = index + 1 (wraps)
-            if game_players_write.iter().all(|uuid| {
-                data.players.read().get(uuid).unwrap().read().ready
-            }) {
-                game_players_write.clone().shuffle(&mut thread_rng());
-                drop(game_read);
+            if let Some(game_players_write) = Some(game_read.players.clone().write()) {
+                // if all players are ready, shuffle player uuid vec, pick a random index and assign move, next player = index + 1 (wraps)
+                if game_players_write.iter().all(|uuid| {
+                    data.players.read().get(uuid).unwrap().read().ready
+                }) {
+                    game_players_write.clone().shuffle(&mut thread_rng());
+                    drop(game_read);
 
-                let game_write = game.write();
-                game_write.player_to_move = game_players_write.choose(&mut thread_rng()).into();
+                    let mut game_write = game.write();
+                    game_write.player_to_move = game_players_write.choose(&mut thread_rng()).copied();
+                }
             }
         }
         None => {
