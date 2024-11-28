@@ -1,7 +1,7 @@
 use std::io::prelude::*;
 use std::{time::Duration};
 use std::collections::HashMap;
-use std::ops::Deref;
+use std::ops::{Deref, Index};
 use std::ptr::read;
 use std::rc::Rc;
 use std::sync::{Arc};
@@ -409,37 +409,86 @@ pub async fn api_lobby_player_ready(body: web::Json<ApiPlayerReadySchema>, data:
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GameLeaveSchema {
-    pub playerUuid: String,
-    pub gameUuid: String,
+    pub playerUuid: Uuid,
+    pub gameUuid: Uuid,
 }
 
 pub async fn api_lobby_game_leave(body: web::Json<GameLeaveSchema>, data: web::Data<AppState>) -> impl Responder {
-    let query_result = sqlx::query(r#"UPDATE player SET game_uuid = NULL, ready = FALSE WHERE uuid = $1"#)
+    let update_result: Result<(), Error> = sqlx::query_as("UPDATE player SET game_uuid = NULL WHERE uuid = $1")
         .bind(body.playerUuid.clone())
-        .execute(&data.postgres_pool)
+        .fetch_one(&data.postgres_pool)
         .await;
 
-    #[derive(sqlx::FromRow, Debug, Serialize)]
-    struct ApiLobbyGame {
-        players: Vec<serde_json::Value>,
-        #[serde(rename(serialize = "gameUuid"))]
-        game_uuid: String,
+    if let Err(error) = update_result {
+        let message = format!("An error occurred while joining the game {}", error);
+        error_log(message.clone());
+        return HttpResponse::InternalServerError().body(message);
     }
 
-    let row: ApiLobbyGame = sqlx::query_as(r#"
-        select uuid as game_uuid, players
-        from (
-            select g.uuid as uuid, array_agg(json_build_object('ready', p.ready, 'id', p.id, 'name', p.name)) players
-            from game g
-            join player p on g.uuid = p.game_uuid
-            where g.uuid = $1
-            group by g.uuid
-        ) players;
-    "#).bind(body.gameUuid.clone()).fetch_one(&data.postgres_pool).await.unwrap();
+    match data.players.read().get(&body.playerUuid) {
+        Some(player) => {
+            let mut player_write = player.write();
+            player_write.game_uuid = None;
+            player_write.ready = false;
+        }
+        None => {
+            let message = format!("Player not found while leaving the game {}", &body.playerUuid);
+            error_log(message.clone());
+            return HttpResponse::InternalServerError().body(message);
+        }
+    }
 
-    data.broadcaster.broadcast(json!({ "type": "player_left", "value": row }).to_string().as_str()).await;
+    #[derive(Serialize)]
+    struct ApiGameLeave {
+        #[serde(rename(serialize = "gameUuid"))]
+        game_uuid: String,
+        players: Vec<ApiGameLeavePlayer>,
+    }
 
-    return handle_postgres_query_result(query_result);
+    #[derive(Serialize)]
+    struct ApiGameLeavePlayer {
+        ready: bool,
+        id: i32,
+        name: String,
+    }
+
+    let players = data.players.read().clone();
+    if let Some(game) = data.games.read().get(&body.gameUuid) {
+        let game = game.read();
+        let mut game_players_write = game.players.write();
+        if let Some(pos) = game_players_write.iter().position(|uuid| *uuid == body.playerUuid) {
+            game_players_write.remove(pos);
+        }
+        drop(game_players_write);
+
+        let payload = ApiGameLeave {
+            game_uuid: game.uuid.into(),
+            players: game.players.read().iter().fold(Vec::new(), |mut acc, uuid| {
+                match players.get(&uuid) {
+                    Some(player_rwlock) => {
+                        let player = player_rwlock.read();
+                        acc.push(ApiGameLeavePlayer {
+                            ready: player.ready,
+                            id: player.id,
+                            name: player.name.clone(),
+                        });
+                    }
+                    None => {
+                        error_log(format!("player not found while joining the game: {}", &uuid));
+                    }
+                }
+                acc
+            }).into_iter().collect(),
+        };
+
+        eprintln!("players {:?}", data.players.read().iter().collect::<Vec<_>>());
+
+        data.broadcaster.broadcast(json!({ "type": "player_left", "value": payload }).to_string().as_str()).await;
+
+        HttpResponse::Ok().json(json!({ "type": "leave_game" }))
+    } else {
+        HttpResponse::NotFound().json(json!({ "type": "player_left", "status": "not_found" }))
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
