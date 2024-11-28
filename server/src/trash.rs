@@ -2,6 +2,10 @@
 
 // rand::thread_rng().gen_range(0..3 as u8)
 
+// pub fn print_type_of<T>(_: &T) {
+//     println!("{}", std::any::type_name::<T>())
+// }
+
 // let Ok((id,)): Result<(i32,), Error> = sqlx::query_as(r#"INSERT INTO player (uuid, game_uuid) VALUES ($1, $2) ON CONFLICT (uuid) DO UPDATE SET game_uuid = $2 RETURNING id"#)
 //     .bind(body.playerUuid.clone())
 //     .bind(body.gameUuid.clone())

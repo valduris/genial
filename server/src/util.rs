@@ -4,10 +4,6 @@ use sqlx::Error;
 use std::io::Write;
 use sqlx::postgres::PgQueryResult;
 
-pub fn print_type_of<T>(_: &T) {
-    println!("{}", std::any::type_name::<T>())
-}
-
 pub fn handle_postgres_query_result(result: Result<PgQueryResult, Error>) -> HttpResponse {
     match result {
         Ok(_) => {

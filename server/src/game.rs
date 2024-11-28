@@ -34,13 +34,13 @@ lazy_static! {
     ]);
 }
 
-pub fn get_cols_by_row(row: i8, board_size: i8) -> i8 {
+pub fn get_cols_by_row(row: i32, board_size: i32) -> i32 {
     board_size * 2 - 1 + (row * (if row > 0 { -1 } else { 1 }))
 }
 
-pub fn is_coordinate_valid(point: Point, board_size: i8) -> bool {
-    let col = point.x;
-    let row = point.y;
+pub fn is_coordinate_valid(point: &Point, board_size: i32) -> bool {
+    let col = point.x as i32;
+    let row = point.y as i32;
     
     if row > board_size || row < -board_size {
         return false;
@@ -118,36 +118,37 @@ pub fn is_point_special(point: &Point) -> bool {
     SPECIAL_HEX_POINTS.into_iter().any(|p| p.x == point.x && p.y == point.y)
 }
 
-pub fn is_point_covered_with_hex(hex_pairs: &Vec<BoardHexPair>, point: &Point) -> bool {
-    hex_pairs.into_iter().any(|hex_pair|
-        (hex_pair[0].x == point.x && hex_pair[0].y == point.y) || (hex_pair[1].x == point.x && hex_pair[1].y == point.y)
-    )
+pub fn is_point_covered_with_hex(board: &Board /* Vec<BoardHex> */, point: &Point) -> bool {
+    board.into_iter().any(|board_hex: &BoardHex| board_hex.x == point.x && board_hex.y == point.y)
 }
 
 pub fn equal_colors(board_hex_1: BoardHex, board_hex_2: BoardHex) -> bool {
     board_hex_1.color == board_hex_2.color
 }
 
-pub fn is_valid_hex_pair_placement(hex_pairs: &Vec<BoardHexPair>, hex_pair: BoardHexPair) -> bool {
+pub fn is_valid_hex_pair_placement(board: &Board, board_size: i32, hex_pair: BoardHexPair) -> bool {
     let p1: Point = Point { x: hex_pair[0].x, y: hex_pair[0].y };
     let p2: Point = Point { x: hex_pair[1].x, y: hex_pair[1].y };
 
+    if !is_coordinate_valid(&p1, board_size) || !is_coordinate_valid(&p2, board_size) {
+        return false;
+    }
+
     // special ? not_covered && matches_color : not_covered =>
     // not_covered && special ? matches_color : true
-    (!is_point_covered_with_hex(hex_pairs, &p1) && if is_point_special(&p1) {
+    (!is_point_covered_with_hex(board, &p1) && if is_point_special(&p1) {
         let special_hex = get_special_hex_point_by_point(&p1);
         // assert!(special_hex.is_some(), error_log(format!("special hex not found for point ...")));
         equal_colors(hex_pair[0], special_hex.unwrap())
     } else {
         true
-    }) && (!is_point_covered_with_hex(hex_pairs, &p2) && if is_point_special(&p2) {
+    }) && (!is_point_covered_with_hex(board, &p2) && if is_point_special(&p2) {
         let special_hex = get_special_hex_point_by_point(&p2);
         // assert!(special_hex.is_some(), error_log(format!("special hex not found for point ...")));
         equal_colors(hex_pair[1], special_hex.unwrap())
-        } else {
-            true
-        }
-    )
+    } else {
+        true
+    })
 }
 
 #[derive(Serialize, Clone)]

@@ -53,7 +53,7 @@ pub struct Player {
     pub uuid: Uuid,
     pub id: i32,
     pub game_uuid: Option<Uuid>,
-    pub hex_pairs: Vec<HexPair>,
+    pub hex_pairs: HexPairs,
     pub moves_in_turn: i8,
     pub progress: Progress,
 }
@@ -113,13 +113,6 @@ pub type BoardHexPair = [BoardHex; 2];
 pub type HexPair = [Color; 2];
 
 pub type HexPairs = Vec<HexPair>;
-
-pub type SpecialCorners = (BoardHex, BoardHex, BoardHex, BoardHex, BoardHex, BoardHex);
-
-struct MoveTimer {
-    player_uuid: Uuid,
-    time_per_move: u16,
-}
 
 pub struct Game {
     pub admin_uuid: Uuid,

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use uuid::Uuid;
 use crate::AppState;
-use crate::game::{calculate_progress_gained, COLORS};
+use crate::game::{calculate_progress_gained, is_valid_hex_pair_placement, COLORS};
 use crate::types::{BoardHex, BoardHexPair, Color, HexPair, Player};
 use crate::util::error_log;
 
@@ -28,8 +28,17 @@ pub async fn api_game_place_hex_pair(body: web::Json<PlaceHexPairSchema>, data: 
         return HttpResponse::BadRequest().body(message);
     }
 
+    let players_read = data.players.read();
+    let game_read = games.get(&body.gameUuid).unwrap().read();
+
+    if !players_read.contains_key(&body.playerUuid) {
+        let message = format!("player does not exist in state with uuid: {}", body.gameUuid);
+        error_log(message.clone());
+        return HttpResponse::BadRequest().body(message);
+    }
+
     // remove hex pair from players hex pair list and insert hex pair in board hex pair list
-    let player = data.players.read().get(&body.playerUuid).unwrap().clone();
+    let player = players_read.get(&body.playerUuid).unwrap().clone();
     let mut player_hex_pairs = player.read().hex_pairs.clone();
     match player_hex_pairs.clone().get(body.hexPairIndex) {
         Some(player_hex_pair) => {
@@ -39,7 +48,14 @@ pub async fn api_game_place_hex_pair(body: web::Json<PlaceHexPairSchema>, data: 
                 Some(board) => {
                     let board_hex_1 = BoardHex { color: player_hex_pair[0].clone(), x: body.x1, y: body.y1 };
                     let board_hex_2 = BoardHex { color: player_hex_pair[1].clone(), x: body.x2, y: body.y2 };
-                    let progress_gained = calculate_progress_gained(board.read().to_vec(), [board_hex_1, board_hex_2]);
+                    let board_hex_pair: BoardHexPair = [board_hex_1, board_hex_2];
+                    let board_read = board.read();
+                    if !is_valid_hex_pair_placement(&board_read, game_read.board_size, board_hex_pair) {
+                        let message = format!("invalid hex pair placement {:?} on board {:?}", board_hex_pair, board_read);
+                        error_log(message.clone());
+                        return HttpResponse::BadRequest().body(message);
+                    }
+                    let progress_gained = calculate_progress_gained(board.read().to_vec(), board_hex_pair);
                     let total_progress = progress_gained.clone().sum(player.read().progress.clone());
                     // increment progress values and check how many colors reaches genial, increment moves_in_turn if necessary
                     let genial_count = COLORS.iter().fold(0, |mut acc, color| {
@@ -87,8 +103,4 @@ pub async fn api_game_place_hex_pair(body: web::Json<PlaceHexPairSchema>, data: 
     // // data.broadcaster.broadcast_to(<HashMap<Uuid, Player> as Clone>::clone(&game.players).into_keys().collect(), json!({ "type": "hexy_pair_placed", "data": game }).to_string().as_str()).await;
 
     return HttpResponse::Ok().json(serde_json::json!({ "status": "success", "operation": "place_hexy_pair" }));
-}
-
-pub fn key_not_found_log(key: &str) {
-    error_log(format!("game uuid not found in data.boards: {}", key))
 }
