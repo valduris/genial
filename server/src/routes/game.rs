@@ -1,11 +1,9 @@
-use std::collections::HashMap;
 use actix_web::{web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use uuid::Uuid;
 use crate::AppState;
 use crate::game::{calculate_progress_gained, is_valid_hex_pair_placement, COLORS};
-use crate::types::{BoardHex, BoardHexPair, Color, HexPair, Player};
+use crate::types::{BoardHex, BoardHexPair};
 use crate::util::error_log;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -86,7 +84,6 @@ pub async fn api_game_place_hex_pair(body: web::Json<PlaceHexPairSchema>, data: 
                     let hex_pair = games.get(&body.gameUuid).unwrap().read().hex_pairs_in_bag.clone().take_random_hex_pair();
                     player_writable.hex_pairs.push(hex_pair);
                 }
-                // drop(player_writable);
             }
         }
         None => {
@@ -95,12 +92,6 @@ pub async fn api_game_place_hex_pair(body: web::Json<PlaceHexPairSchema>, data: 
             return HttpResponse::BadRequest().body(message);
         }
     }
-
-    eprintln!("api_game_place_hex_pair, {:?}", data.players.read().get(&body.playerUuid).unwrap().read());
-
-
-    //
     // // data.broadcaster.broadcast_to(<HashMap<Uuid, Player> as Clone>::clone(&game.players).into_keys().collect(), json!({ "type": "hexy_pair_placed", "data": game }).to_string().as_str()).await;
-
     return HttpResponse::Ok().json(serde_json::json!({ "status": "success", "operation": "place_hexy_pair" }));
 }

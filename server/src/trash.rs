@@ -36,3 +36,12 @@
 //     GROUP BY g.id;
 // "#;
 // let rows: Vec<ApiGame> = sqlx::query_as(query).fetch_all(&state.postgres_pool).await.unwrap();
+
+// impl fmt::Debug for BoardHexPair {
+//     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         fmt.debug_tuple("BoardHexPair")
+//             .field(&self.0)
+//             .field(&self.1)
+//             .finish()
+//     }
+// }

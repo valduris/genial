@@ -55,7 +55,6 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("can't connect to database");
 
-    // let mut conn = pool.acquire().await.expect("Could not acquire connection pool");
 
     // actix_web::rt::spawn(async move {
     //     let mut interval = interval(Duration::from_secs(2));

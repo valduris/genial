@@ -57,7 +57,7 @@ export function GenialUi(props: GenialUiStateProps) {
                             <ProgressBarsConnected />
                         </>
                     )}
-                    <PlayerRegistrationFormConnected />
+                    {/*<PlayerRegistrationFormConnected />*/}
                 </div>
             </AppShell>
         </MantineProvider>

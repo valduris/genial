@@ -130,20 +130,3 @@ pub struct Game {
 pub type Board = Vec<BoardHex>;
 
 pub type Boards = Arc<RwLock<HashMap<Uuid, Arc<RwLock<Board>>>>>;
-
-// impl Default for Boards {
-//     fn default() -> Self {
-//         Boards(Arc::new(RwLock::new(HashMap::new())))
-//     }
-// }
-
-// impl fmt::Debug for BoardHexPair {
-//     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         fmt.debug_tuple("BoardHexPair")
-//             .field(&self.0)
-//             .field(&self.1)
-//             .finish()
-//     }
-// }
-
-// pub type Direction = [-1, 0] | [0, -1] | [1, 0] | [-1, 1] | [0, 1] | [1, -1];
