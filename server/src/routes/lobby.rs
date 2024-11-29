@@ -97,12 +97,6 @@ pub async fn api_game_create(body: web::Json<CreateGameSchema>, data: web::Data<
 
 pub async fn api_get_games(state: web::Data<AppState>) -> HttpResponse {
     #[derive(Serialize)]
-    struct ApiGetGamesPlayer {
-        ready: bool,
-        id: i32,
-        name: String,
-    }
-    #[derive(Serialize)]
     struct ApiGetGames {
         uuid: Uuid,
         name: String,
@@ -110,10 +104,9 @@ pub async fn api_get_games(state: web::Data<AppState>) -> HttpResponse {
         playerCount: i8,
         showProgress: bool,
         status: String,
-        players: Vec<ApiGetGamesPlayer>,
+        players: Vec<ApiLobbyPlayerState>,
     }
 
-    let players = state.players.read();
     let data: Vec<ApiGetGames> = state.games.read().iter().map(|(_, game_lock)| {
         let game = game_lock.read();
         let api_game = ApiGetGames {
@@ -123,22 +116,7 @@ pub async fn api_get_games(state: web::Data<AppState>) -> HttpResponse {
             playerCount: game.player_count,
             showProgress: game.show_progress,
             status: game.status.clone(),
-            players: game.players.read().iter().fold(Vec::new(), |mut acc, uuid| {
-                match players.get(&uuid) {
-                    Some(player) => {
-                        let player = player.read();
-                        acc.push(ApiGetGamesPlayer {
-                            ready: player.ready,
-                            id: player.id,
-                            name: player.name.clone(),
-                        })
-                    }
-                    None => {
-                        error_log(format!("player not found (api_get_games) {}", &uuid))
-                    }
-                }
-                acc
-            }).into_iter().collect(),
+            players: collect_lobby_game_player_state(&state, &game.uuid).unwrap(),
         };
         api_game
     }).collect();
@@ -160,45 +138,21 @@ pub async fn api_get_lobby_game(body: web::Json<ApiLobbyGameSchema>, state: web:
         playerCount: i8,
         showProgress: bool,
         status: String,
-        players: Vec<ApiLobbyGamePlayer>,
-    }
-
-    #[derive(Serialize)]
-    struct ApiLobbyGamePlayer {
-        ready: bool,
-        id: i32,
-        name: String,
+        players: Vec<ApiLobbyPlayerState>,
     }
 
     if let Some(game_lock) = state.games.read().get(&body.gameUuid) {
         let game = game_lock.read();
-        let players = state.players.read();
-        let data = ApiLobbyGame {
+
+        HttpResponse::Ok().json(json!(ApiLobbyGame {
             uuid: game.uuid,
             name: game.name.clone(),
             boardSize: game.board_size.into(),
             playerCount: game.player_count,
             showProgress: game.show_progress,
             status: game.status.clone(),
-            players: game.players.read().iter().fold(Vec::new(), |mut acc, uuid| {
-                match players.get(&uuid) {
-                    Some(player) => {
-                        let player = player.read();
-                        acc.push(ApiLobbyGamePlayer {
-                            ready: player.ready,
-                            id: player.id,
-                            name: player.name.clone(),
-                        });
-                    }
-                    None => {
-                        error_log(format!("player not found while joining the game: {}", &uuid));
-                    }
-                }
-                acc
-            }).into_iter().collect(),
-        };
-
-        HttpResponse::Ok().json(json!(data))
+            players: collect_lobby_game_player_state(&state, &body.gameUuid).unwrap(),
+        }))
     } else {
         error_log(format!("game not found: {} (api_get_lobby_game)", &body.gameUuid));
         HttpResponse::NotFound().json(json!({ "status": "error" }))
@@ -250,23 +204,13 @@ pub async fn api_lobby_game_join(body: web::Json<GameJoinSchema>, data: web::Dat
         }
     }
 
-    eprintln!("{:?}", data.players.read().get(&body.playerUuid).unwrap().read());
-
     #[derive(Serialize)]
     struct ApiGameJoin {
         #[serde(rename(serialize = "gameUuid"))]
         game_uuid: String,
-        players: Vec<ApiGameJoinPlayer>,
+        players: Vec<ApiLobbyPlayerState>,
     }
 
-    #[derive(Serialize)]
-    struct ApiGameJoinPlayer {
-        ready: bool,
-        id: i32,
-        name: String,
-    }
-
-    let players = data.players.read().clone();
     if let Some(game) = data.games.read().get(&body.gameUuid) {
         let game = game.read();
         let mut game_players_write = game.players.write();
@@ -277,25 +221,8 @@ pub async fn api_lobby_game_join(body: web::Json<GameJoinSchema>, data: web::Dat
 
         let payload = ApiGameJoin {
             game_uuid: game.uuid.into(),
-            players: game.players.read().iter().fold(Vec::new(), |mut acc, uuid| {
-                match players.get(&uuid) {
-                    Some(player_rwlock) => {
-                        let player = player_rwlock.read();
-                        acc.push(ApiGameJoinPlayer {
-                            ready: player.ready,
-                            id: player.id,
-                            name: player.name.clone(),
-                        });
-                    }
-                    None => {
-                        error_log(format!("player not found while joining the game: {}", &uuid));
-                    }
-                }
-                acc
-            }).into_iter().collect(),
+            players: collect_lobby_game_player_state(&data, &body.gameUuid).unwrap(),
         };
-
-        eprintln!("players {:?}", data.players.read().iter().collect::<Vec<_>>());
 
         data.broadcaster.broadcast(json!({ "type": "player_joined", "value": payload }).to_string().as_str()).await;
 
@@ -304,6 +231,42 @@ pub async fn api_lobby_game_join(body: web::Json<GameJoinSchema>, data: web::Dat
         HttpResponse::NotFound().json(json!({ "type": "player_joined", "status": "not_found" }))
     }
 }
+
+#[derive(Serialize)]
+pub struct ApiLobbyPlayerState {
+    ready: bool,
+    id: i32,
+    name: String,
+}
+
+pub fn collect_lobby_game_player_state(data: &web::Data<AppState>, game_uuid: &Uuid) -> Option<Vec<ApiLobbyPlayerState>> {
+    match data.games.read().get(game_uuid) {
+         Some(game) => {
+             let players: Vec<ApiLobbyPlayerState> = game.read().players.read().iter().fold(Vec::new(), |mut acc, uuid| {
+                 match data.players.read().get(&uuid) {
+                     Some(player_rwlock) => {
+                         let player = player_rwlock.read();
+                         acc.push(ApiLobbyPlayerState {
+                             ready: player.ready,
+                             id: player.id,
+                             name: player.name.clone(),
+                         });
+                     }
+                     None => {
+                         error_log(format!("player not found while collecting player data for game {}, {}", &game_uuid, &uuid));
+                     }
+                 }
+                 acc
+             }).into_iter().collect();
+             Some(players)
+         }
+        None => {
+            error_log(format!("game not found while collecting player info for game: {}", &game_uuid));
+            None
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ApiPlayerReadySchema {
     pub playerUuid: Uuid,
@@ -311,7 +274,7 @@ pub struct ApiPlayerReadySchema {
     pub ready: bool,
 }
 
-pub async fn api_lobby_player_ready(body: web::Json<ApiPlayerReadySchema>, data: web::Data<AppState>) -> impl Responder {
+pub async fn api_lobby_player_ready(body: web::Json<ApiPlayerReadySchema>, data: web::Data<AppState>) -> HttpResponse {
     match data.players.read().get(&body.playerUuid) {
         Some(player) => {
             player.write().ready = body.ready;
@@ -338,6 +301,17 @@ pub async fn api_lobby_player_ready(body: web::Json<ApiPlayerReadySchema>, data:
                     game_write.player_to_move = game_players_write.choose(&mut thread_rng()).copied();
                 }
             }
+
+            match collect_lobby_game_player_state(&data, &body.gameUuid) {
+                Some(players) => {
+                    return HttpResponse::Ok().json(json!({ "type": "player_ready", "data": { "games": json!({ &body.gameUuid.to_string(): {
+                        "players": players,
+                    }})}}));
+                }
+                None => {
+                    return HttpResponse::NotFound().json(json!({ "type": "player_ready", "data": "game_not_found" }));
+                }
+            }
         }
         None => {
             let message = format!("Game not found with uuid: {}", &body.gameUuid);
@@ -351,12 +325,7 @@ pub async fn api_lobby_player_ready(body: web::Json<ApiPlayerReadySchema>, data:
     //     start timer
     //     deal random hexys from drawables to all players
     // }
-
-    println!("player {} is ready? {}", body.playerUuid, body.ready);
     // println!("player_uuids {:?} ", player_uuids);
-
-    return HttpResponse::Ok().json(json!({ "type": "player_ready" }));
-
     // data.broadcaster.broadcast(json!({ "type": "player_ready", "value": row }).to_string().as_str()).await;
 }
 
@@ -395,17 +364,9 @@ pub async fn api_lobby_game_leave(body: web::Json<GameLeaveSchema>, data: web::D
     struct ApiGameLeave {
         #[serde(rename(serialize = "gameUuid"))]
         game_uuid: String,
-        players: Vec<ApiGameLeavePlayer>,
+        players: Vec<ApiLobbyPlayerState>,
     }
 
-    #[derive(Serialize)]
-    struct ApiGameLeavePlayer {
-        ready: bool,
-        id: i32,
-        name: String,
-    }
-
-    let players = data.players.read().clone();
     if let Some(game) = data.games.read().get(&body.gameUuid) {
         let game = game.read();
         let mut game_players_write = game.players.write();
@@ -416,25 +377,8 @@ pub async fn api_lobby_game_leave(body: web::Json<GameLeaveSchema>, data: web::D
 
         let payload = ApiGameLeave {
             game_uuid: game.uuid.into(),
-            players: game.players.read().iter().fold(Vec::new(), |mut acc, uuid| {
-                match players.get(&uuid) {
-                    Some(player_rwlock) => {
-                        let player = player_rwlock.read();
-                        acc.push(ApiGameLeavePlayer {
-                            ready: player.ready,
-                            id: player.id,
-                            name: player.name.clone(),
-                        });
-                    }
-                    None => {
-                        error_log(format!("player not found while joining the game: {}", &uuid));
-                    }
-                }
-                acc
-            }).into_iter().collect(),
+            players: collect_lobby_game_player_state(&data, &body.gameUuid).unwrap(),
         };
-
-        eprintln!("players {:?}", data.players.read().iter().collect::<Vec<_>>());
 
         data.broadcaster.broadcast(json!({ "type": "player_left", "value": payload }).to_string().as_str()).await;
 

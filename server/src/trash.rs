@@ -36,22 +36,3 @@
 //     GROUP BY g.id;
 // "#;
 // let rows: Vec<ApiGame> = sqlx::query_as(query).fetch_all(&state.postgres_pool).await.unwrap();
-
-// tokio RwLock
-// let tasks = game.players.iter().map(|uuid| tokio::spawn(async move {
-//     let player = players.get(&uuid).unwrap().read();
-//     ApiLobbyGamePlayer {
-//         ready: player.ready,
-//         id: player.id,
-//         name: player.name.clone(),
-//     }
-// })).collect::<FuturesUnordered<_>>();
-//
-// let players: Vec<_> = futures::future::join_all(tasks).await.iter().filter(|r| {
-//     r.is_ok()
-// }).map(|r| {
-//     r.unwrap()
-// }).collect();
-// .iter().map(|r| {
-// Ok(r);
-// }).collect();
