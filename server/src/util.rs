@@ -4,17 +4,6 @@ use sqlx::Error;
 use std::io::Write;
 use sqlx::postgres::PgQueryResult;
 
-pub fn handle_postgres_query_result(result: Result<PgQueryResult, Error>) -> HttpResponse {
-    match result {
-        Ok(_) => {
-            return HttpResponse::Ok().json(serde_json::json!({ "status": "success" }));
-        }
-        Err(e) => {
-            return HttpResponse::InternalServerError().json(serde_json::json!({ "status": "error","message": format!("{:?}", e)}));
-        }
-    }
-}
-
 pub fn error_log(s: String) {
     let mut file = OpenOptions::new().create_new(true).write(true).append(true).open("../error.log").unwrap();
 
