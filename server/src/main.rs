@@ -74,6 +74,7 @@ async fn main() -> std::io::Result<()> {
     });
 
     load_existing_games_from_database(&app_data).await;
+    load_existing_players_from_database(&app_data).await;
 
     HttpServer::new(move || {
         let cors = Cors::default()

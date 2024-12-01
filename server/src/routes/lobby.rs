@@ -55,6 +55,39 @@ pub async fn load_existing_games_from_database(data: &web::Data<AppState>) {
     });
 }
 
+pub async fn load_existing_players_from_database(data: &web::Data<AppState>) {
+    #[derive(Serialize, sqlx::FromRow)]
+    struct LoadPlayerFromDb {
+        uuid: String,
+        name: String,
+        game_uuid: String,
+        id: i32,
+    }
+    let query = "SELECT uuid, name, game_uuid, id FROM player";
+    let rows: Result<Vec<LoadPlayerFromDb>, Error> = sqlx::query_as(query).fetch_all(&data.postgres_pool).await;
+
+    if let Err(error) = rows {
+        error_log(format!("database error (load_existing_players_from_database) {}", error));
+        return;
+    }
+
+    let mut players = data.players.write();
+
+    rows.unwrap().iter().for_each(|r| {
+        let player_uuid = Uuid::parse_str(r.uuid.as_str()).unwrap();
+        players.insert(player_uuid, Arc::new(RwLock::new(Player {
+            uuid: player_uuid,
+            name: r.name.clone(),
+            game_uuid: Some(Uuid::parse_str(r.game_uuid.as_str()).unwrap()),
+            id: r.id,
+            ready: false,
+            hex_pairs: Vec::new(),
+            moves_in_turn: 0,
+            progress: Progress::new(),
+        })));
+    });
+}
+
 pub async fn api_game_create(body: web::Json<CreateGameSchema>, data: web::Data<AppState>) -> HttpResponse {
     let uuid = Uuid::new_v4();
     // let query_result  = sqlx::query(
