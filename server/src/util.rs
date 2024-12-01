@@ -2,7 +2,7 @@ use std::fs::OpenOptions;
 use std::io::Write;
 
 pub fn error_log(s: String) {
-    let mut file = OpenOptions::new().create_new(true).write(true).append(true).open("../error.log").unwrap();
+    let mut file = OpenOptions::new().create(true).write(true).append(true).open("../error.log").unwrap();
 
     if let Err(e) = writeln!(file, "{}", s) {
         eprintln!("Couldn't write to file: {}", e);

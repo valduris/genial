@@ -4,37 +4,60 @@ import {selectCurrentGameUuid, selectPlayerUuid} from "./selectors";
 import * as immer from "immer";
 import { setGenialState } from "./index";
 
-interface PlayerJoined {
-    type: "player_joined";
-    value: {
-        gameUuid: Uuid4;
+// {
+//     "data": {
+//         "games": {
+//             "4be1adbd-569b-4d3b-8189-8830398dcf83": {
+//                 "players": [
+//                     {
+//                         "id": 1,
+//                         "name": "grietiņa",
+//                         "ready": false
+//                     }
+//                 ]
+//             }
+//         }
+//     },
+//     "type": "player_joined"
+// }
+
+interface LobbyGameData {
+    games: Record<Uuid4, {
         players: [{
             id: number;
             name: string;
             ready: boolean;
         }];
-    };
+    }>;
 }
 
-type EventSourceData = PlayerJoined;
-
-export function isPlayerJoinedMessage(payload: EventSourceData): payload is PlayerJoined {
-    return payload.type === "player_joined";
+interface PlayerLobbyGameData {
+    type: "player_joined" | "player_left" | "player_ready";
+    data: LobbyGameData;
 }
 
-export function onEventSourceMessage(data: EventSourceData): Thunk {
+type EventSourceData = PlayerLobbyGameData;
+
+export function hasLobbyGameData(payload: EventSourceData): payload is PlayerLobbyGameData {
+    return ["player_joined", "player_left", "player_ready"].includes(payload.type);
+}
+
+export function onEventSourceMessage(payload: EventSourceData): Thunk {
     return (dispatch, getState) => {
-        if ("ping" in data) {
+        if ("ping" in payload) {
             fetchJson("http://localhost:8080/api/pong", {
                 body: JSON.stringify({ playerUuid: selectPlayerUuid(getState()) }),
             });
-        } else if (isPlayerJoinedMessage(data)) {
-            console.log("player_joined", data);
+        } else if (hasLobbyGameData(payload)) {
+            console.log(payload.type, payload.data);
             dispatch(setGenialState(immer.produce(getState(), state => {
-                const lobbyGame = state.lobbyGames[data.value.gameUuid];
-                if (lobbyGame) {
-                    lobbyGame.players = data.value.players;
-                }
+                Object.keys(payload.data).forEach(gameUuid => {
+                    const lobbyGame = state.lobbyGames[gameUuid];
+                    if (lobbyGame) {
+                        lobbyGame.players = payload.data.games[gameUuid].players;
+                    }
+                });
+
 
                 const currentGameUuid = selectCurrentGameUuid(state);
 
@@ -49,6 +72,6 @@ export function onEventSourceMessage(data: EventSourceData): Thunk {
             })));
             console.log("getState", getState());
         }
-        console.log("onEventSourceMessage", data);
+        console.log("onEventSourceMessage", payload);
     };
 }

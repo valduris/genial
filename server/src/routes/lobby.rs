@@ -116,7 +116,7 @@ pub async fn api_get_games(state: web::Data<AppState>) -> HttpResponse {
             playerCount: game.player_count,
             showProgress: game.show_progress,
             status: game.status.clone(),
-            players: collect_lobby_game_player_state(&state, &game.uuid).unwrap(),
+            players: collect_lobby_game_player_state(&state, &game.uuid),
         };
         api_game
     }).collect();
@@ -151,7 +151,7 @@ pub async fn api_get_lobby_game(body: web::Json<ApiLobbyGameSchema>, state: web:
             playerCount: game.player_count,
             showProgress: game.show_progress,
             status: game.status.clone(),
-            players: collect_lobby_game_player_state(&state, &body.gameUuid).unwrap(),
+            players: collect_lobby_game_player_state(&state, &body.gameUuid),
         }))
     } else {
         error_log(format!("game not found: {} (api_get_lobby_game)", &body.gameUuid));
@@ -204,13 +204,6 @@ pub async fn api_lobby_game_join(body: web::Json<GameJoinSchema>, data: web::Dat
         }
     }
 
-    #[derive(Serialize)]
-    struct ApiGameJoin {
-        #[serde(rename(serialize = "gameUuid"))]
-        game_uuid: String,
-        players: Vec<ApiLobbyPlayerState>,
-    }
-
     if let Some(game) = data.games.read().get(&body.gameUuid) {
         let game = game.read();
         let mut game_players_write = game.players.write();
@@ -219,16 +212,23 @@ pub async fn api_lobby_game_join(body: web::Json<GameJoinSchema>, data: web::Dat
         }
         drop(game_players_write);
 
-        let payload = ApiGameJoin {
-            game_uuid: game.uuid.into(),
-            players: collect_lobby_game_player_state(&data, &body.gameUuid).unwrap(),
-        };
+        let payload = json!({
+            "type": "player_joined",
+            "data": {
+                "games": json!({
+                    &body.gameUuid.to_string(): {
+                        "players": collect_lobby_game_player_state(&data, &body.gameUuid),
+                    }
+                })
+            }
+        });
 
-        data.broadcaster.broadcast(json!({ "type": "player_joined", "value": payload }).to_string().as_str()).await;
+        data.broadcaster.broadcast(payload.to_string().as_str()).await;
 
-        HttpResponse::Ok().json(json!({ "type": "join_game" }))
+        HttpResponse::Ok().json(json!({ "type": "player_joined", "status": "ok" }))
     } else {
-        HttpResponse::NotFound().json(json!({ "type": "player_joined", "status": "not_found" }))
+        error_log(format!("Game not found with uuid: {}", &body.gameUuid));
+        HttpResponse::NotFound().json(json!({ "type": "player_joined", "status": "error" }))
     }
 }
 
@@ -239,10 +239,10 @@ pub struct ApiLobbyPlayerState {
     name: String,
 }
 
-pub fn collect_lobby_game_player_state(data: &web::Data<AppState>, game_uuid: &Uuid) -> Option<Vec<ApiLobbyPlayerState>> {
+pub fn collect_lobby_game_player_state(data: &web::Data<AppState>, game_uuid: &Uuid) -> Vec<ApiLobbyPlayerState> {
     match data.games.read().get(game_uuid) {
          Some(game) => {
-             let players: Vec<ApiLobbyPlayerState> = game.read().players.read().iter().fold(Vec::new(), |mut acc, uuid| {
+             game.read().players.read().iter().fold(Vec::new(), |mut acc, uuid| {
                  match data.players.read().get(&uuid) {
                      Some(player_rwlock) => {
                          let player = player_rwlock.read();
@@ -257,12 +257,11 @@ pub fn collect_lobby_game_player_state(data: &web::Data<AppState>, game_uuid: &U
                      }
                  }
                  acc
-             }).into_iter().collect();
-             Some(players)
+             }).into_iter().collect()
          }
         None => {
             error_log(format!("game not found while collecting player info for game: {}", &game_uuid));
-            None
+            Vec::new()
         }
     }
 }
@@ -302,21 +301,24 @@ pub async fn api_lobby_player_ready(body: web::Json<ApiPlayerReadySchema>, data:
                 }
             }
 
-            match collect_lobby_game_player_state(&data, &body.gameUuid) {
-                Some(players) => {
-                    return HttpResponse::Ok().json(json!({ "type": "player_ready", "data": { "games": json!({ &body.gameUuid.to_string(): {
-                        "players": players,
-                    }})}}));
+            let payload = json!({
+                "type": "player_ready",
+                "data": {
+                    "games": json!({
+                        &body.gameUuid.to_string(): {
+                            "players": collect_lobby_game_player_state(&data, &body.gameUuid),
+                        }
+                    })
                 }
-                None => {
-                    return HttpResponse::NotFound().json(json!({ "type": "player_ready", "data": "game_not_found" }));
-                }
-            }
+            });
+
+            data.broadcaster.broadcast(payload.to_string().as_str()).await;
+
+            HttpResponse::Ok().json(json!({ "type": "player_ready", "status": "ok" }))
         }
         None => {
-            let message = format!("Game not found with uuid: {}", &body.gameUuid);
-            error_log(message.clone());
-            return HttpResponse::BadRequest().body(message);
+            error_log(format!("Game not found with uuid: {}", &body.gameUuid));
+            HttpResponse::NotFound().json(json!({ "type": "player_ready", "status": "error" }))
         }
     }
 
@@ -342,9 +344,8 @@ pub async fn api_lobby_game_leave(body: web::Json<GameLeaveSchema>, data: web::D
         .await;
 
     if let Err(error) = update_result {
-        let message = format!("An error occurred while joining the game {}", error);
-        error_log(message.clone());
-        return HttpResponse::InternalServerError().body(message);
+        error_log(format!("An error occurred while leaving the game {}", error));
+        return HttpResponse::NotFound().json(json!({ "type": "player_left", "status": "error" }));
     }
 
     match data.players.read().get(&body.playerUuid) {
@@ -354,17 +355,9 @@ pub async fn api_lobby_game_leave(body: web::Json<GameLeaveSchema>, data: web::D
             player_write.ready = false;
         }
         None => {
-            let message = format!("Player not found while leaving the game {}", &body.playerUuid);
-            error_log(message.clone());
-            return HttpResponse::InternalServerError().body(message);
+            error_log(format!("Player not found while leaving the game {}", &body.playerUuid));
+            return HttpResponse::NotFound().json(json!({ "type": "player_left", "status": "error" }));
         }
-    }
-
-    #[derive(Serialize)]
-    struct ApiGameLeave {
-        #[serde(rename(serialize = "gameUuid"))]
-        game_uuid: String,
-        players: Vec<ApiLobbyPlayerState>,
     }
 
     if let Some(game) = data.games.read().get(&body.gameUuid) {
@@ -375,16 +368,22 @@ pub async fn api_lobby_game_leave(body: web::Json<GameLeaveSchema>, data: web::D
         }
         drop(game_players_write);
 
-        let payload = ApiGameLeave {
-            game_uuid: game.uuid.into(),
-            players: collect_lobby_game_player_state(&data, &body.gameUuid).unwrap(),
-        };
+        let payload = json!({
+            "type": "player_left",
+            "data": {
+                "games": json!({
+                    &body.gameUuid.to_string(): {
+                        "players": collect_lobby_game_player_state(&data, &body.gameUuid),
+                    }
+                })
+            }
+        });
 
-        data.broadcaster.broadcast(json!({ "type": "player_left", "value": payload }).to_string().as_str()).await;
+        data.broadcaster.broadcast(payload.to_string().as_str()).await;
 
-        HttpResponse::Ok().json(json!({ "type": "leave_game" }))
+        HttpResponse::Ok().json(json!({ "type": "player_left", "status": "ok" }))
     } else {
-        HttpResponse::NotFound().json(json!({ "type": "player_left", "status": "not_found" }))
+        HttpResponse::NotFound().json(json!({ "type": "player_left", "status": "error" }))
     }
 }
 
