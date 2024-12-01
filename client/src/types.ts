@@ -37,6 +37,8 @@ export interface LocalPlayer {
     firstPlacedHexy: BoardHexy | undefined;
     movesInTurn: number;
     progress: Progress;
+    id: number;
+    uuid: Uuid4;
 }
 
 export interface Point {
@@ -121,8 +123,6 @@ export interface Genial {
     lobbyGames: LobbyGames;
     eventSourceState: EventSourceState;
     playerUuid: Uuid4;
-    playerId: number;
-    playerName: string;
     menu: {
         open: boolean;
         entries: MenuOption[];
@@ -154,7 +154,6 @@ export enum EventSourceState {
 
 export enum LocalStorageKey {
     PlayerUuid = "playerUuid",
-    PlayerName = "playerName",
 }
 
 export interface ThunkExtraArguments {

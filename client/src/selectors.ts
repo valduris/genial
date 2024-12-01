@@ -151,13 +151,13 @@ export function selectPlayerUuid(state: Pick<Genial, "playerUuid">): Uuid4 {
     return state.playerUuid;
 }
 
-export function selectPlayerId(state: Pick<Genial, "playerId">): number {
-    return state.playerId;
+export function selectPlayerId(state: DeepPick<Genial, "player", "id">): number {
+    return state.player.id;
 }
 
-export function selectCurrentGameUuid(state: Pick<Genial, "lobbyGames" | "playerId">): Uuid4 | undefined {
+export function selectCurrentGameUuid(state: Pick<Genial, "lobbyGames"> & FirstParam<typeof selectPlayerId>): Uuid4 | undefined {
     return Object.keys(state.lobbyGames).reduce((memo: Uuid4 | undefined, gameUuid: string) => {
-        if (!memo && state.lobbyGames[gameUuid].players.some(p => p.id === state.playerId)) {
+        if (!memo && state.lobbyGames[gameUuid].players.some(p => p.id === selectPlayerId(state))) {
             memo = gameUuid;
         }
         return memo;

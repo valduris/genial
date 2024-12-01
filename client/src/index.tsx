@@ -72,12 +72,12 @@ export const initialGenialState: Genial = {
         hoveredHexyCoords: undefined,
         movesInTurn: 0,
         progress: createEmptyProgress(),
+        id: 1,
+        uuid: "",
     },
     game: createEmptyGame(),
     lobbyGames: {},
     playerUuid: getOrCreatePlayerUuidForUnauthenticatedPlayer(),
-    playerName: getOrCreatePlayerNameForUnauthenticatedPlayer(),
-    playerId: 1,
 };
 
 export function getOrCreatePlayerUuidForUnauthenticatedPlayer(): Uuid4 {
@@ -90,18 +90,6 @@ export function getOrCreatePlayerUuidForUnauthenticatedPlayer(): Uuid4 {
     }
 
     return uuidFromLocalStorage;
-}
-
-export function getOrCreatePlayerNameForUnauthenticatedPlayer(): string {
-    const playerNameFromLocalStorage = localStorage.getItem(LocalStorageKey.PlayerName);
-
-    if (!playerNameFromLocalStorage) {
-        const playerName = "Hexter_" + randomFromRange(1000, 9999);
-        localStorage.setItem(LocalStorageKey.PlayerName, playerName);
-        return playerName
-    }
-
-    return playerNameFromLocalStorage;
 }
 
 export function createGenialReducer(initialUiState: Genial = initialGenialState) {
@@ -159,6 +147,17 @@ export interface InitializeResult {
     };
 }
 
+export interface ApiPlayerInfo {
+    type: "player_info",
+    data: {
+        players: Record<Uuid4, {
+            name: string;
+            id: number;
+            uuid: Uuid4;
+        }>;
+    };
+}
+
 export async function initialize(): Promise<InitializeResult> {
     const rootNode = document.getElementById("root") as HTMLDivElement;
     const thunkExtraArguments: ThunkExtraArguments = {
@@ -188,7 +187,21 @@ export async function initialize(): Promise<InitializeResult> {
             }, {}),
             loadingState: games.length > 0 ? "loaded" : "noGames"
         }));
-        console.log("api/games", store.getState());
+    });
+
+    fetchJson("http://localhost:8080/api/player/info", { body: JSON.stringify({ playerUuid: getOrCreatePlayerUuidForUnauthenticatedPlayer() }) }).then((payload: ApiPlayerInfo) => {
+        let playerUuid;
+        try {
+            playerUuid = Object.keys(payload.data.players)[0];
+        } catch (e) {
+            console.error("player not found: ", getOrCreatePlayerUuidForUnauthenticatedPlayer())
+        }
+
+        if (playerUuid !== undefined) {
+            store.dispatch(setGenialState({
+                player: payload.data.players[playerUuid],
+            }));
+        }
     });
 
     const initializeResult = {
@@ -212,7 +225,6 @@ export async function initialize(): Promise<InitializeResult> {
     const source = new EventSource(`http://localhost:8080/events/${getOrCreatePlayerUuidForUnauthenticatedPlayer()}`);
 
     source.addEventListener("message", (e) => {
-        console.log("MSG", e);
         store.dispatch(onEventSourceMessage(JSON.parse(e.data)));
     }, false);
 

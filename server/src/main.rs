@@ -18,9 +18,7 @@ use sqlx::{FromRow, Pool, Postgres, Row};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::routes::game::api_game_place_hex_pair;
-use crate::routes::lobby::{
-    api_game_create, api_get_games, api_get_lobby_game, api_lobby_game_join, api_lobby_game_leave, api_lobby_player_ready, api_player_register, load_existing_games_from_database
-};
+use crate::routes::lobby::{api_game_create, api_get_games, api_get_lobby_game, api_lobby_game_join, api_lobby_game_leave, api_lobby_player_ready, api_player_info, api_player_register, load_existing_games_from_database, load_existing_players_from_database};
 use crate::types::{Boards, Games, Players};
 
 mod broadcast;
@@ -95,6 +93,7 @@ async fn main() -> std::io::Result<()> {
             .route("/api/game/leave", web::post().to(api_lobby_game_leave))
             .route("/api/lobby_game", web::post().to(api_get_lobby_game))
             .route("/api/player/register", web::post().to(api_player_register))
+            .route("/api/player/info", web::post().to(api_player_info))
             .route("/api/game/ready", web::post().to(api_lobby_player_ready))
             .route("/api/game/placeHexy", web::post().to(api_game_place_hex_pair))
     })

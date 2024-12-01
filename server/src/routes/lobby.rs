@@ -60,7 +60,7 @@ pub async fn load_existing_players_from_database(data: &web::Data<AppState>) {
     struct LoadPlayerFromDb {
         uuid: String,
         name: String,
-        game_uuid: String,
+        game_uuid: Option<String>,
         id: i32,
     }
     let query = "SELECT uuid, name, game_uuid, id FROM player";
@@ -78,7 +78,7 @@ pub async fn load_existing_players_from_database(data: &web::Data<AppState>) {
         players.insert(player_uuid, Arc::new(RwLock::new(Player {
             uuid: player_uuid,
             name: r.name.clone(),
-            game_uuid: Some(Uuid::parse_str(r.game_uuid.as_str()).unwrap()),
+            game_uuid: if r.game_uuid.clone().is_none() { None } else { Some(Uuid::parse_str(r.game_uuid.clone().unwrap().as_str()).unwrap()) },
             id: r.id,
             ready: false,
             hex_pairs: Vec::new(),
@@ -196,44 +196,16 @@ pub struct GameJoinSchema {
     pub gameUuid: Uuid,
     pub playerUuid: Uuid,
 }
-pub async fn api_lobby_game_join(body: web::Json<GameJoinSchema>, data: web::Data<AppState>) -> impl Responder {
-    #[derive(sqlx::FromRow)]
-    struct UpsertPlayer {
-        id: i32,
-    }
-
-    let upsert_result: Result<UpsertPlayer, Error> = sqlx::query_as(r#"INSERT INTO player (uuid, game_uuid) VALUES ($1, $2) ON CONFLICT (uuid) DO UPDATE SET game_uuid = $2 RETURNING id"#)
-        .bind(body.playerUuid.clone())
-        .bind(body.gameUuid.clone())
-        .fetch_one(&data.postgres_pool)
-        .await;
-
-    if let Err(error) = upsert_result {
-        let message = format!("an error occurred while joining the game {}", error);
-        error_log(message.clone());
-        return HttpResponse::BadRequest().body(message);
-    }
-
-    let players_read_lock = data.players.read();
-
-    match players_read_lock.get(&body.playerUuid) {
-        Some(player_rw_lock) => {
-            let mut player = player_rw_lock.write();
+pub async fn api_lobby_game_join(body: web::Json<GameJoinSchema>, data: web::Data<AppState>) -> HttpResponse {
+    match data.players.read().get(&body.playerUuid) {
+        None => {
+            error_log(format!("player not found (api_lobby_game_join) with uuid: {}", &body.playerUuid));
+            return HttpResponse::NotFound().json(json!({ "type": "player_joined", "status": "error" }));
+        }
+        Some(player_rwlock) => {
+            let mut player = player_rwlock.write();
             player.game_uuid = Some(body.gameUuid.clone());
             player.ready = false;
-        }
-        None => {
-            drop(players_read_lock);
-            data.players.write().insert(body.playerUuid, Arc::new(RwLock::new(Player {
-                name: get_random_name(),
-                ready: false,
-                uuid: body.playerUuid,
-                id: upsert_result.unwrap().id,
-                game_uuid: body.gameUuid.into(),
-                hex_pairs: Vec::new(),
-                moves_in_turn: 0,
-                progress: Progress::new(),
-            })));
         }
     }
 
@@ -260,7 +232,7 @@ pub async fn api_lobby_game_join(body: web::Json<GameJoinSchema>, data: web::Dat
 
         HttpResponse::Ok().json(json!({ "type": "player_joined", "status": "ok" }))
     } else {
-        error_log(format!("Game not found with uuid: {}", &body.gameUuid));
+        error_log(format!("game not found (api_lobby_game_join) with uuid: {}", &body.gameUuid));
         HttpResponse::NotFound().json(json!({ "type": "player_joined", "status": "error" }))
     }
 }
@@ -371,16 +343,6 @@ pub struct GameLeaveSchema {
 }
 
 pub async fn api_lobby_game_leave(body: web::Json<GameLeaveSchema>, data: web::Data<AppState>) -> impl Responder {
-    let update_result: Result<(), Error> = sqlx::query_as("UPDATE player SET game_uuid = NULL WHERE uuid = $1")
-        .bind(body.playerUuid.clone())
-        .fetch_one(&data.postgres_pool)
-        .await;
-
-    if let Err(error) = update_result {
-        error_log(format!("An error occurred while leaving the game {}", error));
-        return HttpResponse::NotFound().json(json!({ "type": "player_left", "status": "error" }));
-    }
-
     match data.players.read().get(&body.playerUuid) {
         Some(player) => {
             let mut player_write = player.write();
@@ -388,7 +350,7 @@ pub async fn api_lobby_game_leave(body: web::Json<GameLeaveSchema>, data: web::D
             player_write.ready = false;
         }
         None => {
-            error_log(format!("Player not found while leaving the game {}", &body.playerUuid));
+            error_log(format!("player not found while leaving the game {}", &body.playerUuid));
             return HttpResponse::NotFound().json(json!({ "type": "player_left", "status": "error" }));
         }
     }
@@ -416,8 +378,75 @@ pub async fn api_lobby_game_leave(body: web::Json<GameLeaveSchema>, data: web::D
 
         HttpResponse::Ok().json(json!({ "type": "player_left", "status": "ok" }))
     } else {
+        error_log(format!("game not found while leaving the game {}", &body.gameUuid));
         HttpResponse::NotFound().json(json!({ "type": "player_left", "status": "error" }))
     }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PlayerInfo {
+    pub playerUuid: Uuid,
+}
+
+pub async fn api_player_info(body: web::Json<PlayerInfo>, data: web::Data<AppState>) -> impl Responder {
+    #[derive(sqlx::FromRow)]
+    struct UpsertPlayer {
+        id: i32,
+    }
+
+    let random_name = get_random_name();
+    let upsert_result: Result<UpsertPlayer, Error> = sqlx::query_as(r#"INSERT INTO player (uuid, name) VALUES ($1, $2) ON CONFLICT (uuid) DO UPDATE SET name = $2 RETURNING id, name"#)
+        .bind(body.playerUuid.clone())
+        .bind(random_name.clone())
+        .fetch_one(&data.postgres_pool)
+        .await;
+
+    if let Err(error) = upsert_result {
+        error_log(format!("(api_player_info) an error occurred {}", error));
+        return HttpResponse::InternalServerError().json(json!({ "type": "player_info", "status": "error" }));
+    }
+
+    let player_id = upsert_result.unwrap().id;
+    let mut game_uuid = None;
+    let players_read = data.players.read();
+
+    match players_read.get(&body.playerUuid) {
+        Some(player_rwlock) => {
+            game_uuid = Some(player_rwlock.read().game_uuid);
+        }
+        None => {
+            drop(players_read);
+            data.players.write().insert(body.playerUuid, Arc::new(RwLock::new(Player {
+                game_uuid: None,
+                name: random_name.clone(),
+                ready: false,
+                uuid: body.playerUuid,
+                id: player_id,
+                hex_pairs: Vec::new(),
+                moves_in_turn: 0,
+                progress: Progress::new(),
+            })));
+        }
+    }
+
+    let payload = json!({
+        "type": "player_info",
+        "data": {
+            "players": {
+                &body.playerUuid.to_string(): {
+                    "uuid": body.playerUuid.clone(),
+                    "id": player_id,
+                    "name": random_name,
+                    "gameUuid": game_uuid,
+                    // "hexPairs": player.hex_pairs,
+                    // "movesInTurn": player.moves_in_turn,
+                    // "progress": player.progress,
+                }
+            },
+        },
+    });
+
+    HttpResponse::Ok().json(json!(payload))
 }
 
 #[derive(Serialize, Deserialize, Debug)]

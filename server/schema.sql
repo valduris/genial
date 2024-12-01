@@ -199,3 +199,5 @@ alter table player add column game_uuid text;
 
 ALTER TABLE ONLY "player"
     ADD CONSTRAINT player_game_uuid_fkey FOREIGN KEY ("game_uuid") REFERENCES game(uuid) ON UPDATE CASCADE ON DELETE SET NULL;
+
+alter table player alter column name set not null;

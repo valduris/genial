@@ -112,12 +112,12 @@ export function onCreateGameFormSubmit(data: CreateGameFormFormState): Thunk<Gen
         dispatch(setGenialState(immer.produce(getState(), state => {
             state.lobbyGames[result.data.uuid] = {
                 ...result.data,
-                adminId: state.playerId,
-                players: [{
-                    id: state.playerId,
-                    name: state.playerName,
-                    ready: false,
-                }],
+                adminUuid: state.player.uuid,
+                // players: [{
+                //     id: state.playerId,
+                //     name: state.playerName,
+                //     ready: false,
+                // }],
             };
         })));
     };

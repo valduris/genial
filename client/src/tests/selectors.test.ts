@@ -79,7 +79,7 @@ describe("selectCurrentGameUuid", () => {
                     "uuid": "9b7a1aae-5b9f-4218-90d4-90722675e289"
                 },
             },
-            "playerId": 1
+            "player": { "id": 1 },
         };
         const uuid = selectCurrentGameUuid(state);
 

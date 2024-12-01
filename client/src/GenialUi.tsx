@@ -32,7 +32,7 @@ const COLORS: MantineColorsTuple = [
     "#af5a00"
 ];
 
-const theme = createTheme({
+const THEME = createTheme({
     colors: {
         blue: COLORS,
     },
@@ -41,7 +41,7 @@ const theme = createTheme({
 
 export function GenialUi(props: GenialUiStateProps) {
     return (
-        <MantineProvider theme={theme}>
+        <MantineProvider theme={THEME}>
             <AppShell>
                 <div className="genial">
                     <Navigation />

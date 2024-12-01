@@ -175,7 +175,7 @@ export function onReadyChange(): Thunk {
         let ready;
 
         dispatch(setGenialState(immer.produce(getState(), state => {
-            const player = state.lobbyGames[lobbyGameUuid].players.find(p => !!p && p.id === state.playerId);
+            const player = state.lobbyGames[lobbyGameUuid].players.find(p => !!p && p.id === state.player.id);
 
             if (!player) {
                 return debugAssert("player not found");
@@ -184,9 +184,9 @@ export function onReadyChange(): Thunk {
             player.ready = !player.ready;
             ready = player.ready;
 
-            if (ready) {
-                state.game = { ...createEmptyGame(), status: GameStatus.InProgress } as unknown as Game;
-            }
+            // if (ready) {
+            //     state.game = { ...createEmptyGame(), ...state.game, status: GameStatus.InProgress } as unknown as Game;
+            // }
         })));
 
         const body = { playerUuid: selectPlayerUuid(getState()), ready: ready, gameUuid: lobbyGameUuid };
@@ -207,11 +207,17 @@ export function onLeaveGame(): Thunk {
         const result = await fetchJson("http://localhost:8080/api/game/leave", {
             body: JSON.stringify({
                 playerUuid: selectPlayerUuid(state),
-                gameUuid: state.game.uuid,
+                gameUuid: selectCurrentGameUuid(state),
             }),
         });
-        dispatch(setGenialState(immer.produce(state, state => {
-            state.game = undefined;
-        })));
+
+        if (result.status === "ok") {
+
+        } else if (result.status === "error") {
+            console.error(result);
+        }
+        // dispatch(setGenialState(immer.produce(state, state => {
+        //     state.game = undefined;
+        // })));
     };
 }

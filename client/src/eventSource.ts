@@ -1,6 +1,6 @@
 import {GameStatus, Thunk, Uuid4} from "./types";
 import { fetchJson } from "./api";
-import {selectCurrentGameUuid, selectPlayerUuid} from "./selectors";
+import {selectCurrentGameUuid, selectPlayerId, selectPlayerUuid} from "./selectors";
 import * as immer from "immer";
 import { setGenialState } from "./index";
 
@@ -49,29 +49,15 @@ export function onEventSourceMessage(payload: EventSourceData): Thunk {
                 body: JSON.stringify({ playerUuid: selectPlayerUuid(getState()) }),
             });
         } else if (hasLobbyGameData(payload)) {
-            console.log(payload.type, payload.data);
             dispatch(setGenialState(immer.produce(getState(), state => {
-                Object.keys(payload.data).forEach(gameUuid => {
+                Object.keys(payload.data.games).forEach(gameUuid => {
                     const lobbyGame = state.lobbyGames[gameUuid];
                     if (lobbyGame) {
                         lobbyGame.players = payload.data.games[gameUuid].players;
                     }
                 });
-
-
-                const currentGameUuid = selectCurrentGameUuid(state);
-
-                console.log("currentGameUuid", currentGameUuid);
-
-                if (currentGameUuid) {
-                    state.game = { ...state.lobbyGames[currentGameUuid], status: GameStatus.Lobby, hexyPairs: [] };
-                }
-                // TODONOW
-                // const currentGameUuid = state.lobbyGames.find(g => g.players[state.playerId])
-                // state.game = state.lobbyGames[];
             })));
-            console.log("getState", getState());
         }
-        console.log("onEventSourceMessage", payload);
+        console.log("onEventSourceMessage p s", payload, getState());
     };
 }
