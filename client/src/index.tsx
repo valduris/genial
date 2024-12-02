@@ -57,28 +57,33 @@ export function createEmptyGame(): Game {
     }
 }
 
-export const initialGenialState: Genial = {
-    loadingState: "loading",
-    eventSourceState: EventSourceState.CLOSED,
-    menu: {
-        open: false,
-        entries: [],
-        selectedEntryIndex: 0,
-    },
-    player: {
-        hexyPairs: [undefined, undefined, undefined, undefined, undefined, undefined],
-        firstPlacedHexy: undefined,
-        name: "",
-        hoveredHexyCoords: undefined,
-        movesInTurn: 0,
-        progress: createEmptyProgress(),
-        id: 1,
-        uuid: "",
-    },
-    game: createEmptyGame(),
-    lobbyGames: {},
-    playerUuid: getOrCreatePlayerUuidForUnauthenticatedPlayer(),
-};
+export function createGenialInitialState(state: DeepPartial<Genial>): Genial {
+    const defaultState: Genial = {
+        loadingState: "loading",
+        eventSourceState: EventSourceState.CLOSED,
+        menu: {
+            open: false,
+            entries: [],
+            selectedEntryIndex: 0,
+        },
+        player: {
+            hexyPairs: [undefined, undefined, undefined, undefined, undefined, undefined],
+            firstPlacedHexy: undefined,
+            name: "",
+            hoveredHexyCoords: undefined,
+            movesInTurn: 0,
+            progress: createEmptyProgress(),
+            id: 1,
+            uuid: "",
+        },
+        game: createEmptyGame(),
+        lobbyGames: {},
+        playerUuid: getOrCreatePlayerUuidForUnauthenticatedPlayer(),
+    };
+
+    return Object.assign(defaultState, state);
+}
+
 
 export function getOrCreatePlayerUuidForUnauthenticatedPlayer(): Uuid4 {
     const uuidFromLocalStorage = localStorage.getItem(LocalStorageKey.PlayerUuid);
@@ -92,7 +97,7 @@ export function getOrCreatePlayerUuidForUnauthenticatedPlayer(): Uuid4 {
     return uuidFromLocalStorage;
 }
 
-export function createGenialReducer(initialUiState: Genial = initialGenialState) {
+export function createGenialReducer(initialUiState: Genial) {
     return (state = initialUiState, action: ReturnType<typeof setGenialStatePlain>) => {
         if (action.type === SET_GENIAL_UI_STATE) {
             return action.payload;
@@ -140,8 +145,7 @@ export function onGameKeyDown(keyCode: number, initializeResult: InitializeResul
 }
 
 export interface InitializeResult {
-    dispose: () => Promise<void>;
-    store: {
+    store?: {
         getState: () => Genial,
         dispatch: Dispatch;
     };
@@ -159,18 +163,40 @@ export interface ApiPlayerInfo {
 }
 
 export async function initialize(): Promise<InitializeResult> {
-    const rootNode = document.getElementById("root") as HTMLDivElement;
+    const [lobbyGames, playerInfo] = await Promise.all([
+        fetchJson("http://localhost:8080/api/games", { method: "GET" }).then(games => games),
+        fetchJson("http://localhost:8080/api/player/info", {
+            body: JSON.stringify({ playerUuid: getOrCreatePlayerUuidForUnauthenticatedPlayer() })
+        }).then((payload: ApiPlayerInfo) => { return payload }),
+    ]);
+
+    let playerUuid;
+    try {
+        playerUuid = Object.keys(playerInfo.data.players)[0];
+    } catch (e) {
+        console.error("player not found: ", getOrCreatePlayerUuidForUnauthenticatedPlayer());
+        return Promise.resolve({});
+    }
+
+    const initialGenialState = createGenialInitialState({
+        lobbyGames: lobbyGames.reduce((memo: LobbyGames, game: LobbyGame) => {
+            memo[game.uuid] = game;
+            return memo;
+        }, {}),
+        loadingState: lobbyGames.length > 0 ? "loaded" : "noGames",
+        player: playerInfo.data.players[playerUuid],
+    });
+
     const thunkExtraArguments: ThunkExtraArguments = {
         fetchJson: fetchJson,
     };
-    const rootReducer = createGenialReducer();
+    const rootReducer = createGenialReducer(initialGenialState);
     const middlewares = applyMiddleware(withExtraArgument(thunkExtraArguments));
     const store = createStore(rootReducer, middlewares);
+    const rootNode = document.getElementById("root") as HTMLDivElement;
 
     if (rootNode) {
-        const reactRoot = ReactDOM.createRoot(rootNode)
-
-        reactRoot.render(
+        ReactDOM.createRoot(rootNode).render(
             <Provider store={store}>
                 <GenialUiConnected />
             </Provider>
@@ -179,37 +205,7 @@ export async function initialize(): Promise<InitializeResult> {
 
     GENIAL_GLOBAL.store = store;
 
-    fetchJson("http://localhost:8080/api/games", { method: "GET" }).then((games) => {
-        store.dispatch(setGenialState({
-            lobbyGames: games.reduce((memo: LobbyGames, game: LobbyGame) => {
-                memo[game.uuid] = game;
-                return memo;
-            }, {}),
-            loadingState: games.length > 0 ? "loaded" : "noGames"
-        }));
-    });
-
-    fetchJson("http://localhost:8080/api/player/info", { body: JSON.stringify({ playerUuid: getOrCreatePlayerUuidForUnauthenticatedPlayer() }) }).then((payload: ApiPlayerInfo) => {
-        let playerUuid;
-        try {
-            playerUuid = Object.keys(payload.data.players)[0];
-        } catch (e) {
-            console.error("player not found: ", getOrCreatePlayerUuidForUnauthenticatedPlayer())
-        }
-
-        if (playerUuid !== undefined) {
-            store.dispatch(setGenialState({
-                player: payload.data.players[playerUuid],
-            }));
-        }
-    });
-
     const initializeResult = {
-        dispose: (): Promise<void> => {
-            return Promise.resolve();
-            // document.removeEventListener("keydown", onKeyDown, false);
-            // reactRoot.unmount();
-        },
         store: store,
     };
 
