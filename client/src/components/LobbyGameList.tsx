@@ -3,7 +3,7 @@ import { connect } from "react-redux";
 import { Checkbox, InputWrapper, Table, Container, Button } from '@mantine/core';
 
 import { translate } from "../utils";
-import {GamesLoadingState, Genial, LobbyGames, PlayerCount, Thunk, Uuid4} from "../types";
+import { GamesLoadingState, Genial, LobbyGames, PlayerCount, Thunk, Uuid4 } from "../types";
 
 import { selectPlayerUuid } from "../selectors";
 

@@ -7,7 +7,7 @@ import { Button, Fieldset, TextInput, InputWrapper, Checkbox, Container } from "
 import { translate } from "../utils";
 import { BoardSize, Game, Genial, PlayerCount, Thunk } from "../types";
 import { setGenialState } from "../index";
-import {selectCurrentGameUuid, selectPlayerUuid} from "../selectors";
+import { selectCurrentGameUuid, selectPlayerUuid } from "../selectors";
 
 export interface CreateGameFormFormState {
     boardSize: Game["boardSize"];
@@ -27,10 +27,6 @@ export interface CreateGameFromStateProps {
 export type CreateGameFormProps = CreateGameFromStateProps & CreateGameFormDispatchProps;
 
 export function CreateGameForm(props: CreateGameFormProps) {
-    if (props.hidden) {
-        return null;
-    }
-
     const form = useForm({
         mode: "uncontrolled",
         initialValues: {
@@ -40,6 +36,10 @@ export function CreateGameForm(props: CreateGameFormProps) {
             showProgress: true,
         },
     });
+
+    if (props.hidden) {
+        return null;
+    }
 
     return (
         <Container>

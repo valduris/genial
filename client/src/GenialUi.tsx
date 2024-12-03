@@ -49,7 +49,7 @@ export function GenialUi(props: GenialUiStateProps) {
                     <hr />
                     <CreateGameFormConnected />
                     <LobbyGameListConnected />
-                    {props.game && <LobbyGameConnected />}
+                    <LobbyGameConnected />
                     {props.game && props.game.status === GameStatus.InProgress && (
                         <>
                             <BoardConnected />

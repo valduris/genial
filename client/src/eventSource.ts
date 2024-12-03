@@ -1,6 +1,6 @@
-import {GameStatus, Thunk, Uuid4} from "./types";
+import { Thunk, Uuid4} from "./types";
 import { fetchJson } from "./api";
-import {selectCurrentGameUuid, selectPlayerId, selectPlayerUuid} from "./selectors";
+import { selectPlayerUuid} from "./selectors";
 import * as immer from "immer";
 import { setGenialState } from "./index";
 
