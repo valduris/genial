@@ -130,6 +130,7 @@ export interface Genial {
     },
     game?: Game;
     player: LocalPlayer;
+    error: string | undefined;
 }
 
 export type HexColor = string;

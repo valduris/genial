@@ -2,10 +2,10 @@ import * as React from "react";
 import * as immer from "immer";
 import { connect } from "react-redux";
 
-import { debugAssert, mapTimes, translate } from "../../utils";
-import {LobbyGame, Genial, Thunk, Game, GameStatus} from "../../types";
-import {createEmptyGame, setGenialState} from "../../index";
-import {selectPlayerUuid, selectPlayerId, selectCurrentGameUuid} from "../../selectors";
+import { debugAssert, handleFetchResult, mapTimes, translate } from "../../utils";
+import { LobbyGame, Genial, Thunk } from "../../types";
+import { setGenialState } from "../../index";
+import { selectPlayerUuid, selectPlayerId, selectCurrentGameUuid } from "../../selectors";
 import { fetchJson } from "../../api";
 import { Button, Checkbox, Container, Fieldset, InputWrapper, Table, TextInput, Grid } from "@mantine/core";
 import { MAX_PLAYER_COUNT } from "../../consts";
@@ -111,58 +111,6 @@ export const LobbyGameConnected = connect((state: Genial) => {
     };
 }, { onLeaveGame: onLeaveGame, onReadyChange: onReadyChange })(LobbyGameComponent);
 
-// const state: FirstParam<typeof selectCurrentGameUuid> = {
-//     "lobbyGames": {
-//         "fa8011c3-056b-4e26-b24e-a67d21649597": {
-//             "boardSize": 6,
-//             "name": "",
-//             "playerCount": 2,
-//             "players": [],
-//             "showProgress": true,
-//             "adminId": 12,
-//             "uuid": "fa8011c3-056b-4e26-b24e-a67d21649597"
-//         },
-//         "42243e19-22f2-4a6f-b8c8-b27e1cdb9d08": {
-//             "boardSize": 6,
-//             "name": "",
-//             "playerCount": 2,
-//             "players": [
-//                 {
-//                     "id": 1,
-//                     "name": "1",
-//                     "ready": false
-//                 }
-//             ],
-//             "adminId": 12897,
-//             "showProgress": true,
-//             "uuid": "42243e19-22f2-4a6f-b8c8-b27e1cdb9d08"
-//         },
-//         "1f3ed932-1518-4fee-8746-b540405b5fe7": {
-//             "boardSize": 6,
-//             "name": "",
-//             "playerCount": 2,
-//             "players": [],
-//             "showProgress": true,
-//             "adminId": 11212,
-//             "uuid": "1f3ed932-1518-4fee-8746-b540405b5fe7"
-//         },
-//         "9b7a1aae-5b9f-4218-90d4-90722675e289": {
-//             "boardSize": 6,
-//             "name": "",
-//             "playerCount": 2,
-//             "players": [],
-//             "showProgress": true,
-//             "adminId": 12334234222,
-//             "uuid": "9b7a1aae-5b9f-4218-90d4-90722675e289"
-//         },
-//     },
-//     "playerId": 1
-// };
-// const uuid = selectCurrentGameUuid(state);
-// console.log("uuid", uuid);
-// console.log("uuid", uuid);
-// console.log("uuid", uuid);
-
 export function onReadyChange(): Thunk {
     return async (dispatch, getState) => {
         const state = getState();
@@ -183,10 +131,6 @@ export function onReadyChange(): Thunk {
 
             player.ready = !player.ready;
             ready = player.ready;
-
-            // if (ready) {
-            //     state.game = { ...createEmptyGame(), ...state.game, status: GameStatus.InProgress } as unknown as Game;
-            // }
         })));
 
         const body = { playerUuid: selectPlayerUuid(getState()), ready: ready, gameUuid: lobbyGameUuid };
@@ -197,27 +141,11 @@ export function onReadyChange(): Thunk {
 export function onLeaveGame(): Thunk {
     return async (dispatch, getState) => {
         const state = getState();
-
-        console.log("state", state);
-
-        if (!state.game) {
-            return;
-        }
-
-        const result = await fetchJson("http://localhost:8080/api/game/leave", {
+        dispatch(handleFetchResult(await fetchJson("http://localhost:8080/api/game/leave", {
             body: JSON.stringify({
                 playerUuid: selectPlayerUuid(state),
                 gameUuid: selectCurrentGameUuid(state),
             }),
-        });
-
-        if (result.status === "ok") {
-
-        } else if (result.status === "error") {
-            console.error(result);
-        }
-        // dispatch(setGenialState(immer.produce(state, state => {
-        //     state.game = undefined;
-        // })));
+        })));
     };
 }

@@ -10,6 +10,7 @@ import { BoardConnected } from "./components/Board";
 import { CreateGameFormConnected } from "./components/CreateGameForm";
 import { LobbyGameConnected } from "./components/lobbyGame/LobbyGame";
 import { Navigation } from "./components/navigation/Navigation";
+import { SystemMessageConnected } from "./components/SystemMessage";
 import { PlayerRegistrationFormConnected } from "./components/PlayerRegistrationForm";
 
 import '@mantine/core/styles.css';
@@ -45,6 +46,7 @@ export function GenialUi(props: GenialUiStateProps) {
             <AppShell>
                 <div className="genial">
                     <Navigation />
+                    <SystemMessageConnected />
                     <span>{props.playerName}</span>
                     <hr />
                     <CreateGameFormConnected />

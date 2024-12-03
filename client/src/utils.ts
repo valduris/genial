@@ -16,10 +16,11 @@ import {
     PlayerHexyPair,
     Point,
     Progress,
-    Sound,
+    Sound, Thunk,
     Uuid4,
 } from "./types";
 import { translations } from "./translations/en";
+import {setGenialState} from "./index";
 
 export function getProgressColor(progress: number): HexColor {
     return PROGRESS_COLORS[Math.floor(progress * 20)];
@@ -264,4 +265,12 @@ export function getNextElementFromArray<T>(array: T[], current: T): T {
 
 export function translate(what: keyof typeof translations): string {
     return translations[what];
+}
+
+export function handleFetchResult(result: { status: "ok" | "error"; type: string; }): Thunk {
+    return (dispatch) => {
+        if (result.status !== "ok") {
+            dispatch(setGenialState({ error: "An error occurred while fetching data..." }));
+        }
+    }
 }

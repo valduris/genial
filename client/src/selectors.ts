@@ -8,8 +8,6 @@ import {
     Point, Uuid4
 } from "./types";
 import { getNeighboringHexysOf, getSpecialCornerColorByPoint, areNeighbors, isPointSpecialCorner } from "./utils";
-import {setGenialState} from "./index";
-import * as immer from "immer";
 
 export function selectPlayerSelectedHexyPair(state: DeepPick<Genial, "player", "hexyPairs">): PlayerHexyPair | undefined {
     return state.player.hexyPairs.find(hexyPair => hexyPair?.some(hexy => hexy.selected));
@@ -147,8 +145,8 @@ export function selectIsPointCoveredWithHexy(state: Pick<Genial, "game">, point:
     });
 }
 
-export function selectPlayerUuid(state: Pick<Genial, "playerUuid">): Uuid4 {
-    return state.playerUuid;
+export function selectPlayerUuid(state: DeepPick<Genial, "player", "uuid">): Uuid4 {
+    return state.player.uuid;
 }
 
 export function selectPlayerId(state: DeepPick<Genial, "player", "id">): number {

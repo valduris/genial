@@ -6,8 +6,6 @@ import { withExtraArgument } from "redux-thunk";
 import {
     Dispatch,
     EventSourceState,
-    Game,
-    GameStatus,
     Genial, LobbyGame, LobbyGames,
     LocalStorageKey,
     PermanentAny,
@@ -22,7 +20,7 @@ import { SET_GENIAL_UI_STATE } from "./consts";
 import { fetchJson } from "./api";
 
 import "./Genial.css";
-import { createEmptyProgress, randomFromRange, uuid4 } from "./utils";
+import { createEmptyProgress, uuid4 } from "./utils";
 import { onEventSourceMessage } from "./eventSource";
 
 export function setGenialStatePlain(state: Genial) {
@@ -41,20 +39,6 @@ export function setGenialState(state: DeepPartial<Genial>): Thunk {
     return (dispatch, getState) => {
         dispatch(setGenialStatePlain(Object.assign({}, getState(), state)));
     };
-}
-
-export function createEmptyGame(): Game {
-    return {
-        uuid: "",
-        boardSize: 6,
-        playerCount: 2,
-        name: "",
-        adminId: 0,
-        hexyPairs: [],
-        status: GameStatus.Lobby,
-        showProgress: true,
-        players: [],
-    }
 }
 
 export function createGenialInitialState(state: DeepPartial<Genial>): Genial {
@@ -76,9 +60,10 @@ export function createGenialInitialState(state: DeepPartial<Genial>): Genial {
             id: 1,
             uuid: "",
         },
-        game: createEmptyGame(),
+        game: undefined,
         lobbyGames: {},
         playerUuid: getOrCreatePlayerUuidForUnauthenticatedPlayer(),
+        error: undefined,
     };
 
     return Object.assign(defaultState, state);
