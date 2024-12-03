@@ -1,9 +1,10 @@
-import { Button, Group, Fieldset, Grid, TextInput } from "@mantine/core";
+import { Button, Fieldset, Grid, TextInput } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import * as React from "react";
 import { connect } from "react-redux";
 import { Thunk } from "../types";
 import { fetchJson } from "../api";
+import { handleFetchResult } from "../utils";
 
 export interface PlayerRegistrationFormProps {
     onSubmit: (params: OnSubmitParams) => void;
@@ -63,7 +64,9 @@ export interface OnSubmitParams {
 
 export function onPlayerRegistrationFormSubmit(values: OnSubmitParams): Thunk {
     return async (dispatch, getState) => {
-        await fetchJson("http://localhost:8080/api/player/register", { body: JSON.stringify(values) });
+        dispatch(handleFetchResult(
+            await fetchJson("http://localhost:8080/api/player/register", { body: JSON.stringify(values) })
+        ));
     }
 }
 

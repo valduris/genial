@@ -3,6 +3,7 @@ import { fetchJson } from "./api";
 import { selectPlayerUuid} from "./selectors";
 import * as immer from "immer";
 import { setGenialState } from "./index";
+import { handleFetchResult } from "./utils";
 
 // {
 //     "data": {
@@ -47,6 +48,8 @@ export function onEventSourceMessage(payload: EventSourceData): Thunk {
         if ("ping" in payload) {
             fetchJson("http://localhost:8080/api/pong", {
                 body: JSON.stringify({ playerUuid: selectPlayerUuid(getState()) }),
+            }).then(result => {
+                dispatch(handleFetchResult(result));
             });
         } else if (hasLobbyGameData(payload)) {
             dispatch(setGenialState(immer.produce(getState(), state => {

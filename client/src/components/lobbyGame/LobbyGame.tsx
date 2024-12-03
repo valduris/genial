@@ -133,8 +133,9 @@ export function onReadyChange(): Thunk {
             ready = player.ready;
         })));
 
-        const body = { playerUuid: selectPlayerUuid(getState()), ready: ready, gameUuid: lobbyGameUuid };
-        await fetchJson("http://localhost:8080/api/game/ready", { body: JSON.stringify(body) });
+        dispatch(handleFetchResult(await fetchJson("http://localhost:8080/api/game/ready", {
+            body: JSON.stringify({ playerUuid: selectPlayerUuid(getState()), ready: ready, gameUuid: lobbyGameUuid })
+        })));
     }
 }
 

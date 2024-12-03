@@ -2,7 +2,7 @@ import * as React from "react";
 import { connect } from "react-redux";
 import { Checkbox, InputWrapper, Table, Container, Button } from '@mantine/core';
 
-import { translate } from "../utils";
+import { handleFetchResult, translate } from "../utils";
 import { GamesLoadingState, Genial, LobbyGames, PlayerCount, Thunk, Uuid4 } from "../types";
 
 import { selectPlayerUuid } from "../selectors";
@@ -86,6 +86,8 @@ export function onJoinGame(gameUuid: Uuid4): Thunk<Genial> {
             gameUuid: gameUuid,
             playerUuid: selectPlayerUuid(getState()),
         };
-        const result: any = await fetchJson("http://localhost:8080/api/game/join", { body: JSON.stringify(params) });
+        dispatch(handleFetchResult(
+            await fetchJson("http://localhost:8080/api/game/join", { body: JSON.stringify(params) })
+        ));
     };
 }

@@ -4,7 +4,7 @@ import * as React from "react";
 import { useForm } from "@mantine/form";
 import { Button, Fieldset, TextInput, InputWrapper, Checkbox, Container } from "@mantine/core";
 
-import { translate } from "../utils";
+import { handleFetchResult, translate } from "../utils";
 import { BoardSize, Game, Genial, PlayerCount, Thunk } from "../types";
 import { setGenialState } from "../index";
 import { selectCurrentGameUuid, selectPlayerUuid } from "../selectors";
@@ -108,6 +108,8 @@ export function onCreateGameFormSubmit(data: CreateGameFormFormState): Thunk<Gen
         const playerUuid = selectPlayerUuid(getState());
         const body: any = { ...data, playerUuid: playerUuid };
         const result = await fetchJson("http://localhost:8080/api/game", { body: JSON.stringify(body) });
+
+        dispatch(handleFetchResult(result));
 
         dispatch(setGenialState(immer.produce(getState(), state => {
             state.lobbyGames[result.data.uuid] = {
