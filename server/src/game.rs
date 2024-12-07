@@ -170,11 +170,14 @@ impl HexPairsInBag {
             }).into_iter().collect()
         )))
     }
-    pub fn take_random_hex_pair(self) -> HexPair {
+    pub fn take_random_hex_pair(self) -> Option<HexPair> {
         let mut writable = self.0.write().unwrap();
+        if writable.is_empty() {
+            return None;
+        }
         let index = (rand::random::<f32>() * writable.len() as f32).floor() as usize;
-        let value = writable.remove(index);
-        value
+        let value = writable.swap_remove(index);
+        Some(value)
     }
 }
 

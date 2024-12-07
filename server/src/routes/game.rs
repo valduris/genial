@@ -81,8 +81,12 @@ pub async fn api_game_place_hex_pair(body: web::Json<PlaceHexPairSchema>, data: 
             // draw random hex pairs from available hex pair list, insert into players hex pair list
             if player_writable.moves_in_turn == 0 {
                 while player_writable.hex_pairs.len() < 6 {
-                    let hex_pair = games.get(&body.gameUuid).unwrap().read().hex_pairs_in_bag.clone().take_random_hex_pair();
-                    player_writable.hex_pairs.push(hex_pair);
+                    match games.get(&body.gameUuid).unwrap().read().hex_pairs_in_bag.clone().take_random_hex_pair() {
+                        Some(hex_pair) => {
+                            player_writable.hex_pairs.push(hex_pair);
+                        }
+                        None => {}
+                    }
                 }
             }
         }

@@ -1,7 +1,9 @@
+use std::fmt::format;
 use std::io::prelude::*;
 use std::sync::{Arc};
 use parking_lot::RwLock;
 use actix_web::{Responder, web, HttpResponse};
+use futures_util::future::err;
 use rand::{thread_rng};
 use rand::seq::SliceRandom;
 use sqlx::{Error, Row};
@@ -279,14 +281,14 @@ pub struct ApiPlayerReadySchema {
 }
 
 pub async fn api_lobby_player_ready(body: web::Json<ApiPlayerReadySchema>, data: web::Data<AppState>) -> HttpResponse {
-    match data.players.read().get(&body.playerUuid) {
+    let players_read = data.players.read();
+    match players_read.get(&body.playerUuid) {
         Some(player) => {
             player.write().ready = body.ready;
         }
         None => {
-            let message = format!("player not found in player ready route {}", &body.playerUuid);
-            error_log(message.clone());
-            return HttpResponse::NotFound().body(message);
+            error_log(format!("player not found in player ready route {}", &body.playerUuid));
+            return HttpResponse::NotFound().json(json!({ "type": "player_ready", "status": "error" }));
         }
     }
 
@@ -299,10 +301,31 @@ pub async fn api_lobby_player_ready(body: web::Json<ApiPlayerReadySchema>, data:
                     data.players.read().get(uuid).unwrap().read().ready
                 }) {
                     game_players_write.clone().shuffle(&mut thread_rng());
-                    drop(game_read);
+                    let first_player_to_move = game_players_write.choose(&mut thread_rng()).copied();
+                    drop(game_players_write);
+                    let hex_pair_bag = game_read.hex_pairs_in_bag.clone();
 
+                    game_read.players.read().iter().for_each(|player_uuid| {
+                        match players_read.get(&player_uuid) {
+                            Some(player_rwlock) => {
+                                for i in 0..5 {
+                                    match hex_pair_bag.clone().take_random_hex_pair() {
+                                        Some(hex_pair) => {
+                                            player_rwlock.write().hex_pairs.insert(i, hex_pair);
+                                        }
+                                        None => {}
+                                    }
+                                }
+                            }
+                            None => {
+                                error_log(format!("player not found in players state: {}", &player_uuid));
+                            }
+                        }
+                    });
+
+                    drop(game_read);
                     let mut game_write = game.write();
-                    game_write.player_to_move = game_players_write.choose(&mut thread_rng()).copied();
+                    game_write.player_to_move = first_player_to_move;
                 }
             }
 
@@ -318,6 +341,27 @@ pub async fn api_lobby_player_ready(body: web::Json<ApiPlayerReadySchema>, data:
             });
 
             data.broadcaster.broadcast(payload.to_string().as_str()).await;
+
+            match data.players.read().get(&body.playerUuid) {
+                Some(player_rwlock) => {
+                    let player_game_data = json!({
+                        "type": "player_game_data",
+                        "data": {
+                            "players": {
+                                &body.playerUuid.to_string(): {
+                                    "hexPairs": player_rwlock.read().hex_pairs,
+                                }
+                            }
+                        }
+                    });
+
+                    data.broadcaster.broadcast_to(vec![&body.playerUuid], player_game_data.to_string().as_str()).await;
+                }
+                None => {
+                    error_log(format!("player not found with uuid: {}", &body.playerUuid));
+                    return HttpResponse::NotFound().json(json!({ "type": "player_ready", "status": "error" }));
+                }
+            }
 
             HttpResponse::Ok().json(json!({ "type": "player_ready", "status": "ok" }))
         }
