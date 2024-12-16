@@ -355,7 +355,7 @@ pub async fn api_lobby_player_ready(body: web::Json<ApiPlayerReadySchema>, data:
                         }
                     });
 
-                    data.broadcaster.broadcast_to(vec![&body.playerUuid], player_game_data.to_string().as_str()).await;
+                    data.broadcaster.broadcast_to(vec![body.playerUuid], player_game_data.to_string().as_str()).await;
                 }
                 None => {
                     error_log(format!("player not found with uuid: {}", &body.playerUuid));
