@@ -218,6 +218,24 @@ export async function initialize(): Promise<InitializeResult> {
         store.dispatch(setGenialState({ eventSourceState: (e as PermanentAny).readyState as 0 | 1 | 2 }));
     }, false);
 
+    const proto = window.location.protocol.startsWith('https') ? 'wss' : 'ws'
+    const wsUri = `${proto}://${"localhost"}:8080/genial_ws`
+    const socket = new WebSocket(wsUri);
+
+    socket.onopen = () => {
+        setInterval(() => {
+            if (socket) {
+                socket.send(JSON.stringify({yes_my_lord: true}));
+            }
+        }, 1000)
+    }
+
+    socket.onmessage = ev => {
+        console.log('Received: ' + ev.data, 'message')
+    }
+
+    socket.onclose = () => {}
+
     return initializeResult;
 }
 
