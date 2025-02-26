@@ -5,13 +5,15 @@ import { applyMiddleware, createStore } from "redux";
 import { withExtraArgument } from "redux-thunk";
 import {
     Dispatch,
-    EventSourceState,
-    Genial, LobbyGame, LobbyGames,
+    Genial,
+    LobbyGame,
+    LobbyGames,
     LocalStorageKey,
     PermanentAny,
     Thunk,
     ThunkExtraArguments,
-    Uuid4
+    Uuid4,
+    WebSocketState
 } from "./types"
 
 import { GenialUiConnected } from "./GenialUi";
@@ -21,7 +23,7 @@ import { fetchJson } from "./api";
 
 import "./Genial.css";
 import { createEmptyProgress, uuid4 } from "./utils";
-import { onEventSourceMessage } from "./eventSource";
+import { onWebSocketMessage } from "./eventSource";
 
 export function setGenialStatePlain(state: Genial) {
     return {
@@ -44,7 +46,7 @@ export function setGenialState(state: DeepPartial<Genial>): Thunk {
 export function createGenialInitialState(state: DeepPartial<Genial>): Genial {
     const defaultState: Genial = {
         loadingState: "loading",
-        eventSourceState: EventSourceState.CLOSED,
+        webSocketState: WebSocketState.CLOSED,
         menu: {
             open: false,
             entries: [],
@@ -91,7 +93,7 @@ export function createGenialReducer(initialUiState: Genial) {
     }
 }
 
-export function onGameKeyDown(keyCode: number, initializeResult: InitializeResult): Thunk {
+export function onGameKeyDown(keyCode: number): Thunk {
     return (dispatch, getState) => {
         const game = getState();
 
@@ -172,11 +174,8 @@ export async function initialize(): Promise<InitializeResult> {
         player: playerInfo.data.players[playerUuid],
     });
 
-    const thunkExtraArguments: ThunkExtraArguments = {
-        fetchJson: fetchJson,
-    };
     const rootReducer = createGenialReducer(initialGenialState);
-    const middlewares = applyMiddleware(withExtraArgument(thunkExtraArguments));
+    const middlewares = applyMiddleware(withExtraArgument({ fetchJson: fetchJson }));
     const store = createStore(rootReducer, middlewares);
     const rootNode = document.getElementById("root") as HTMLDivElement;
 
@@ -196,45 +195,29 @@ export async function initialize(): Promise<InitializeResult> {
 
     function onKeyDown(event: { keyCode: number; }): void {
         if ([13, 27, 37, 38, 39, 40].includes(event.keyCode)) {
-            store.dispatch(onGameKeyDown(event.keyCode, initializeResult ));
+            store.dispatch(onGameKeyDown(event.keyCode ));
         }
     }
 
     document.addEventListener("keydown", onKeyDown, false);
 
-    console.log("new event source", getOrCreatePlayerUuidForUnauthenticatedPlayer());
-    const source = new EventSource(`http://localhost:8080/events/${getOrCreatePlayerUuidForUnauthenticatedPlayer()}`);
-
-    source.addEventListener("message", (e) => {
-        store.dispatch(onEventSourceMessage(JSON.parse(e.data)));
-    }, false);
-
-    source.addEventListener("open", (e: Event) => {
-        store.dispatch(setGenialState({ eventSourceState: (e as PermanentAny).readyState as 0 | 1 | 2 }));
-    }, false);
-
-    source.addEventListener("error", (e) => {
-        console.log('source.addEventListener("error"', e);
-        store.dispatch(setGenialState({ eventSourceState: (e as PermanentAny).readyState as 0 | 1 | 2 }));
-    }, false);
-
     const proto = window.location.protocol.startsWith('https') ? 'wss' : 'ws'
-    const wsUri = `${proto}://${"localhost"}:8080/genial_ws`
-    const socket = new WebSocket(wsUri);
+    const wsUri = `${proto}://${"localhost"}:8080/genial_ws` //getOrCreatePlayerUuidForUnauthenticatedPlayer()
+    const webSocket = new WebSocket(wsUri);
 
-    socket.onopen = () => {
-        setInterval(() => {
-            if (socket) {
-                socket.send(JSON.stringify({yes_my_lord: true}));
-            }
-        }, 1000)
-    }
+    webSocket.addEventListener("message", (e) => {
+        console.log("ws message", e.data);
+        store.dispatch(onWebSocketMessage(JSON.parse(e.data)));
+    }, false);
 
-    socket.onmessage = ev => {
-        console.log('Received: ' + ev.data, 'message')
-    }
+    webSocket.addEventListener("open", (e: Event) => {
+        console.log("ws open");
+        store.dispatch(setGenialState({ webSocketState: (e as PermanentAny).readyState as 0 | 1 | 2 }));
+    }, false);
 
-    socket.onclose = () => {}
+    webSocket.addEventListener("error", (e) => {
+        store.dispatch(setGenialState({ webSocketState: (e as PermanentAny).readyState as 0 | 1 | 2 }));
+    }, false);
 
     return initializeResult;
 }

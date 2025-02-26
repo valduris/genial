@@ -121,7 +121,7 @@ export interface Game {
 export interface Genial {
     loadingState: GamesLoadingState;
     lobbyGames: LobbyGames;
-    eventSourceState: EventSourceState;
+    webSocketState: WebSocketState;
     playerUuid: Uuid4;
     menu: {
         open: boolean;
@@ -147,7 +147,7 @@ export enum LogLevel {
     Exclusive = 0,
 }
 
-export enum EventSourceState {
+export enum WebSocketState {
     CONNECTING = 0,
     OPEN = 1,
     CLOSED = 2,

@@ -8,6 +8,7 @@ use std::{
 };
 
 use rand::{thread_rng, Rng as _};
+use serde_json::json;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::ws_main::{ConnId, Msg, RoomId};
@@ -119,7 +120,7 @@ impl ChatServer {
         log::info!("Someone joined");
 
         // notify all users in same room
-        self.send_system_message("main", 0, "Someone joined").await;
+        self.send_system_message("main", 0, json!({ "type": "player_connected" }).to_string().as_str()).await;
 
         // register session with random connection ID
         let id = thread_rng().gen::<ConnId>();
@@ -128,8 +129,8 @@ impl ChatServer {
         // auto join session to main room
         self.rooms.entry("main".to_owned()).or_default().insert(id);
 
-        let count = self.visitor_count.fetch_add(1, Ordering::SeqCst);
-        self.send_system_message("main", 0, format!("Total visitors {count}")).await;
+        // let count = self.visitor_count.fetch_add(1, Ordering::SeqCst);
+        // self.send_system_message("main", 0, format!("Total visitors {count}")).await;
 
         // send id back
         id
@@ -137,8 +138,6 @@ impl ChatServer {
 
     /// Unregister connection from room map and broadcast disconnection message.
     async fn disconnect(&mut self, conn_id: ConnId) {
-        println!("Someone disconnected");
-
         let mut rooms: Vec<RoomId> = Vec::new();
 
         // remove sender
@@ -153,7 +152,7 @@ impl ChatServer {
 
         // send message to other users
         for room in rooms {
-            self.send_system_message(&room, 0, "Someone disconnected")
+            self.send_system_message(&room, 0, json!({ "type": "player_disconnected" }).to_string().as_str())
                 .await;
         }
     }
@@ -175,7 +174,7 @@ impl ChatServer {
         }
         // send message to other users
         for room in rooms {
-            self.send_system_message(&room, 0, "Someone disconnected")
+            self.send_system_message(&room, 0, json!({ "type": "player_disconnected" }).to_string().as_str())
                 .await;
         }
 

@@ -43,7 +43,7 @@ export function hasLobbyGameData(payload: EventSourceData): payload is PlayerLob
     return ["player_joined", "player_left", "player_ready"].includes(payload.type);
 }
 
-export function onEventSourceMessage(payload: EventSourceData): Thunk {
+export function onWebSocketMessage(payload: EventSourceData): Thunk {
     return (dispatch, getState) => {
         if ("ping" in payload) {
             fetchJson("http://localhost:8080/api/pong", {
@@ -61,6 +61,6 @@ export function onEventSourceMessage(payload: EventSourceData): Thunk {
                 });
             })));
         }
-        console.log("onEventSourceMessage p s", payload, getState());
+        console.log("onWebSocketMessage p s", payload, getState());
     };
 }
