@@ -202,7 +202,7 @@ export async function initialize(): Promise<InitializeResult> {
     document.addEventListener("keydown", onKeyDown, false);
 
     const proto = window.location.protocol.startsWith('https') ? 'wss' : 'ws'
-    const wsUri = `${proto}://${"localhost"}:8080/genial_ws` //getOrCreatePlayerUuidForUnauthenticatedPlayer()
+    const wsUri = `${proto}://${"localhost"}:8080/ws` //getOrCreatePlayerUuidForUnauthenticatedPlayer()
     const webSocket = new WebSocket(wsUri);
 
     webSocket.addEventListener("message", (e) => {
