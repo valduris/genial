@@ -140,13 +140,11 @@ export function onReadyChange(): Thunk {
 }
 
 export function onLeaveGame(): Thunk {
-    return async (dispatch, getState) => {
+    return async (_, getState, { transport }) => {
         const state = getState();
-        dispatch(handleFetchResult(await fetchJson("http://localhost:8080/api/game/leave", {
-            body: JSON.stringify({
-                playerUuid: selectPlayerUuid(state),
-                gameUuid: selectCurrentGameUuid(state),
-            }),
-        })));
+        transport.send(JSON.stringify({
+            playerUuid: selectPlayerUuid(state),
+            gameUuid: selectCurrentGameUuid(state),
+        }));
     };
 }

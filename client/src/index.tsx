@@ -4,7 +4,6 @@ import { Provider } from "react-redux";
 import { applyMiddleware, createStore } from "redux";
 import { withExtraArgument } from "redux-thunk";
 import {
-    Dispatch,
     Genial,
     LobbyGame,
     LobbyGames,
@@ -23,7 +22,8 @@ import { fetchJson } from "./api";
 
 import "./Genial.css";
 import { createEmptyProgress, uuid4 } from "./utils";
-import { onWebSocketMessage } from "./eventSource";
+import { onWebSocketMessage } from "./onWebSocketMessage";
+import { selectPlayerUuid } from "./selectors";
 
 export function setGenialStatePlain(state: Genial) {
     return {
@@ -47,11 +47,6 @@ export function createGenialInitialState(state: DeepPartial<Genial>): Genial {
     const defaultState: Genial = {
         loadingState: "loading",
         webSocketState: WebSocketState.CLOSED,
-        menu: {
-            open: false,
-            entries: [],
-            selectedEntryIndex: 0,
-        },
         player: {
             hexyPairs: [undefined, undefined, undefined, undefined, undefined, undefined],
             firstPlacedHexy: undefined,
@@ -93,51 +88,6 @@ export function createGenialReducer(initialUiState: Genial) {
     }
 }
 
-export function onGameKeyDown(keyCode: number): Thunk {
-    return (dispatch, getState) => {
-        const game = getState();
-
-        if (keyCode === 27) { // escape
-            game.menu.open = !game.menu.open;
-        } else if (keyCode === 37) { // left
-
-        } else if (keyCode === 38) { // up
-            const newIndex = game.menu.selectedEntryIndex - 1;
-            game.menu.selectedEntryIndex = newIndex < 0 ? game.menu.entries.length - 1 : newIndex;
-        } else if (keyCode === 39) { // right
-
-        } else if (keyCode === 40) { // down
-            const newIndex = game.menu.selectedEntryIndex + 1;
-            game.menu.selectedEntryIndex = newIndex >= game.menu.entries.length ? 0 : newIndex;
-        }
-
-        if (game.menu.open && keyCode === 13) {
-            const selectedEntry = game.menu.entries[game.menu.selectedEntryIndex];
-            if (selectedEntry === "resume") {
-                game.menu.open = false;
-            // } else if (selectedEntry === "saveReplay") {
-                // const anchor = document.createElement("a");
-                // const encodedDownload = "data:text/json;charset=utf-8," + encodeURIComponent(
-                //     JSON.stringify(createReplayFileFromGameHistory(game))
-                // );
-                // anchor.setAttribute("href", encodedDownload);
-                // anchor.setAttribute("download", replayFileName(game));
-                // anchor.click();
-            } else if (selectedEntry === "quitGame") {
-                // game.status = "loading";
-                // game.status = GameStatus.Lobby;
-            }
-        }
-    };
-}
-
-export interface InitializeResult {
-    store?: {
-        getState: () => Genial,
-        dispatch: Dispatch;
-    };
-}
-
 export interface ApiPlayerInfo {
     type: "player_info",
     data: {
@@ -149,20 +99,20 @@ export interface ApiPlayerInfo {
     };
 }
 
-export async function initialize(): Promise<InitializeResult> {
+export async function initialize(): Promise<void> {
+    let playerUuid = getOrCreatePlayerUuidForUnauthenticatedPlayer();
     const [lobbyGames, playerInfo] = await Promise.all([
         fetchJson("http://localhost:8080/api/games", { method: "GET" }).then(games => games),
         fetchJson("http://localhost:8080/api/player/info", {
-            body: JSON.stringify({ playerUuid: getOrCreatePlayerUuidForUnauthenticatedPlayer() })
+            body: JSON.stringify({ playerUuid: playerUuid })
         }).then((payload: ApiPlayerInfo) => { return payload }),
     ]);
 
-    let playerUuid;
     try {
         playerUuid = Object.keys(playerInfo.data.players)[0];
     } catch (e) {
-        console.error("player not found: ", getOrCreatePlayerUuidForUnauthenticatedPlayer());
-        return Promise.resolve({});
+        console.error("player not found: ", playerUuid);
+        return Promise.resolve();
     }
 
     const initialGenialState = createGenialInitialState({
@@ -174,52 +124,40 @@ export async function initialize(): Promise<InitializeResult> {
         player: playerInfo.data.players[playerUuid],
     });
 
-    const rootReducer = createGenialReducer(initialGenialState);
-    const middlewares = applyMiddleware(withExtraArgument({ fetchJson: fetchJson }));
-    const store = createStore(rootReducer, middlewares);
-    const rootNode = document.getElementById("root") as HTMLDivElement;
-
-    if (rootNode) {
-        ReactDOM.createRoot(rootNode).render(
-            <Provider store={store}>
-                <GenialUiConnected />
-            </Provider>
-        );
-    }
-
-    GENIAL_GLOBAL.store = store;
-
-    const initializeResult = {
-        store: store,
-    };
-
-    function onKeyDown(event: { keyCode: number; }): void {
-        if ([13, 27, 37, 38, 39, 40].includes(event.keyCode)) {
-            store.dispatch(onGameKeyDown(event.keyCode ));
-        }
-    }
-
-    document.addEventListener("keydown", onKeyDown, false);
-
     const proto = window.location.protocol.startsWith('https') ? 'wss' : 'ws'
     const wsUri = `${proto}://${"localhost"}:8080/ws` //getOrCreatePlayerUuidForUnauthenticatedPlayer()
     const webSocket = new WebSocket(wsUri);
 
-    webSocket.addEventListener("message", (e) => {
-        console.log("ws message", e.data);
-        store.dispatch(onWebSocketMessage(JSON.parse(e.data)));
-    }, false);
+    webSocket.addEventListener("open", (e: Event) => store.dispatch(onWsOpen(e)), false);
+    webSocket.addEventListener("message", (e) => store.dispatch(onWebSocketMessage(JSON.parse(e.data))), false);
+    webSocket.addEventListener("error", (e) => store.dispatch(setWsStateUponOpenOrError(e)), false);
 
-    webSocket.addEventListener("open", (e: Event) => {
-        console.log("ws open");
-        store.dispatch(setGenialState({ webSocketState: (e as PermanentAny).readyState as 0 | 1 | 2 }));
-    }, false);
+    const rootReducer = createGenialReducer(initialGenialState);
+    const thunkExtra: ThunkExtraArguments = { fetchJson: fetchJson, transport: webSocket };
+    const middlewares = applyMiddleware(withExtraArgument(thunkExtra));
+    const store = createStore(rootReducer, middlewares);
 
-    webSocket.addEventListener("error", (e) => {
-        store.dispatch(setGenialState({ webSocketState: (e as PermanentAny).readyState as 0 | 1 | 2 }));
-    }, false);
+    ReactDOM.createRoot(document.getElementById("root") as HTMLDivElement).render(
+        <Provider store={store}>
+            <GenialUiConnected />
+        </Provider>
+    );
 
-    return initializeResult;
+    GENIAL_GLOBAL.store = store;
+}
+
+function setWsStateUponOpenOrError(e: Event) {
+    return setGenialState({ webSocketState: (e as PermanentAny).currentTarget.readyState as 0 | 1 | 2 | 3 });
+}
+
+function onWsOpen(e: Event): Thunk {
+    return (dispatch, getState, { transport }) => {
+        transport.send(JSON.stringify({
+            message_type: "register",
+            player_uuid: selectPlayerUuid(getState()),
+        }));
+        dispatch(setWsStateUponOpenOrError(e));
+    }
 }
 
 initialize();

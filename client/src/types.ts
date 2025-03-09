@@ -52,8 +52,6 @@ export type Uuid4 = string;
 
 export type PlayerCount = 2 | 3 | 4;
 
-export type MenuOption = "resume" | "pause" | "quitGame"; // "saveReplay" | "loadReplay"
-
 export enum GameStatus {
     InProgress = "inProgress",
     Lobby = "lobby",
@@ -123,11 +121,6 @@ export interface Genial {
     lobbyGames: LobbyGames;
     webSocketState: WebSocketState;
     playerUuid: Uuid4;
-    menu: {
-        open: boolean;
-        entries: MenuOption[];
-        selectedEntryIndex: number;
-    },
     game?: Game;
     player: LocalPlayer;
     error: string | undefined;
@@ -150,7 +143,8 @@ export enum LogLevel {
 export enum WebSocketState {
     CONNECTING = 0,
     OPEN = 1,
-    CLOSED = 2,
+    CLOSING = 2,
+    CLOSED = 3,
 }
 
 export enum LocalStorageKey {
@@ -159,6 +153,7 @@ export enum LocalStorageKey {
 
 export interface ThunkExtraArguments {
     fetchJson: typeof fetchJson,
+    transport: WebSocket,
 }
 
 export type Dispatch<S = Genial, E = ThunkExtraArguments, R = void> = (

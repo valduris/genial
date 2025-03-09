@@ -3,7 +3,7 @@ import * as React from "react";
 import { connect } from "react-redux";
 import { createTheme, MantineProvider, AppShell, MantineColorsTuple } from '@mantine/core';
 
-import { Thunk, PlayerHexyPairIndex, Genial, GameStatus } from "./types"
+import { Thunk, PlayerHexyPairIndex, Genial, GameStatus, WebSocketState } from "./types"
 import { setGenialState } from "./index";
 import { LobbyGameListConnected, PlayerHexyPairListConnected, ProgressBarsConnected } from "./components";
 import { BoardConnected } from "./components/Board";
@@ -18,6 +18,7 @@ import '@mantine/core/styles.css';
 export interface GenialUiStateProps {
     game: Genial["game"];
     playerName: Genial["player"]["name"];
+    webSocketStatus: string;
 }
 
 const COLORS: MantineColorsTuple = [
@@ -48,6 +49,7 @@ export function GenialUi(props: GenialUiStateProps) {
                     <Navigation />
                     <SystemMessageConnected />
                     <span>{props.playerName}</span>
+                    <span style={{ float: "right" }}>{props.webSocketStatus}</span>
                     <hr />
                     <CreateGameFormConnected />
                     <LobbyGameListConnected />
@@ -66,9 +68,20 @@ export function GenialUi(props: GenialUiStateProps) {
     );
 }
 
+function webSocketStateToString(webSocketState: WebSocketState): string {
+    console.log("webSocketState", webSocketState);
+    return {
+        0: "CONNECTING",
+        1: "OPEN",
+        2: "CLOSING",
+        3: "CLOSED",
+    }[webSocketState];
+}
+
 export const GenialUiConnected = connect((state: Genial) => ({
     game: state.game,
     playerName: state.player.name,
+    webSocketStatus: webSocketStateToString(state.webSocketState),
 }))(GenialUi);
 
 export function onPlayerHexyPairClick(hexyPairIndex: PlayerHexyPairIndex, hexyIndex: 0 | 1): Thunk {

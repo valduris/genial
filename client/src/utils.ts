@@ -1,4 +1,4 @@
-import { COLORS, DIRECTIONS, PROGRESS_COLORS, SPECIAL_CORNERS } from "./consts";
+import { COLORS, DIRECTIONS, SPECIAL_CORNERS } from "./consts";
 import {
     BoardHexy,
     BoardHexyPair,
@@ -9,9 +9,6 @@ import {
     DrawableHexyPair,
     DrawableHexyPairs,
     Game,
-    GameStatus,
-    HexColor,
-    MenuOption,
     PermanentAny,
     PlayerHexyPair,
     Point,
@@ -20,11 +17,7 @@ import {
     Uuid4,
 } from "./types";
 import { translations } from "./translations/en";
-import {setGenialState} from "./index";
-
-export function getProgressColor(progress: number): HexColor {
-    return PROGRESS_COLORS[Math.floor(progress * 20)];
-}
+import { setGenialState } from "./index";
 
 export interface CreatePromiseReturnType<T> {
     promise: Promise<T>;
@@ -73,21 +66,6 @@ export function clamp(min: number, x: number, max: number): number {
     return Math.min(Math.max(min, x), max);
 }
 
-// export interface ReplayV1 {
-//     version: string,
-//     hexys: Pick<Hexys, "id">;
-// }
-//
-// export type Replay = ReplayV1;
-
-// export function createReplayFileFromGameHistory(game: Pick<Game, "history" | "startTime" | "teams" | "hexys">): ReplayV1 {
-//     return {
-//         version: "0.0.1",
-//         actions: game.history,
-//         hexys: { id: game.hexys.id },
-//     };
-// }
-
 export function assertNever(x: never): never {
     throw new Error("Unexpected object: " + x);
 }
@@ -110,21 +88,6 @@ export function createBoardHexyPair(hexy1: BoardHexy, hexy2: BoardHexy): BoardHe
 
 export function createHexy(x: number, y: number, color: Color): BoardHexy {
     return { x: x, y: y, color: color };
-}
-
-export function getMenuOptionsByGameTypeAndStatus(status: GameStatus): MenuOption[] {
-    if (status === GameStatus.InProgress) {
-        return ["quitGame"]; // "loadReplay"
-    // } else if (status === "inProgress") {
-        // if (type === "replay") {
-        //     return ["resume", "pause", "quitGame"]; // "loadReplay"
-        // }
-        // return ["resume", "pause", "quitGame"]; //"saveReplay", "loadReplay"
-    } else if (status === "lobby") {
-        return ["quitGame"];
-    }
-
-    assertNever(status);
 }
 
 export function mapTimes<T>(n: number, mapper: (i: number) => T): T[] {
@@ -252,15 +215,6 @@ export function isPointSpecialCorner(point: Point): boolean {
 
 export function isRightButton(event: any): boolean {
     return (event.which && event.which === 3) || (event.button && event.button === 2);
-}
-
-/**
- * it wraps
- */
-export function getNextElementFromArray<T>(array: T[], current: T): T {
-    const currentIndex = array.indexOf(current);
-    const index = (currentIndex + 1) === array.length ? 0 : currentIndex + 1;
-    return array[index];
 }
 
 export function translate(what: keyof typeof translations): string {

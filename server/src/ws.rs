@@ -22,6 +22,7 @@ use crate::AppState;
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
+#[derive(Debug)]
 pub struct RoomsState {
     // Map of room name to set of client IDs
     rooms: HashMap<String, HashSet<String>>,
@@ -186,6 +187,20 @@ pub async fn websocket_handler(
     Ok(res)
 }
 
+#[derive(Deserialize)]
+enum WsMessageType {
+    Register {
+        player_uuid: Uuid,
+    }
+}
+
+
+#[derive(Deserialize, Debug)]
+struct WsRegistrationMessage {
+    player_uuid: Uuid,
+    message_type: String,
+}
+
 async fn handle_websocket_connection(
     stream: actix_ws::MessageStream,
     session: &mut actix_ws::Session,
@@ -205,7 +220,6 @@ async fn handle_websocket_connection(
 
     let mut hb_interval = interval(HEARTBEAT_INTERVAL);
     let mut last_heartbeat = Instant::now();
-
     let _ = session.ping(b"").await;
 
     loop {
@@ -234,18 +248,9 @@ async fn handle_websocket_connection(
 
                         match msg {
                             AggregatedMessage::Text(text) => {
-                                // Parse the message (format: "ROOM_NAME:MESSAGE")
-                                if let Some(pos) = text.find(':') {
-                                    let (room_name, message) = text.split_at(pos);
-                                    let message = &message[1..]; // Skip the colon
-
-                                    if let Ok(state) = app_state.rooms_state.lock() {
-                                        if state.is_in_room(&room_name, &client_id) {
-                                            // Format the message with sender ID
-                                            let formatted_msg = format!("{}:{}", client_id, message);
-                                            state.broadcast_to_room(&room_name, &formatted_msg, Some(&client_id));
-                                        }
-                                    }
+                                match serde_json::from_str::<WsRegistrationMessage>(&text) {
+                                    Ok(status) => println!("Received status:\n{:?}\n", status),
+                                    Err(e) => println!("Could not parse status: {}\n", e)
                                 }
                             }
                             AggregatedMessage::Ping(bytes) => {

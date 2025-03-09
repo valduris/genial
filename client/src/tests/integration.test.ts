@@ -1,4 +1,4 @@
-import { initialize, InitializeResult } from "../index";
+import { initialize } from "../index";
 import { onPlayerHexyPairClick } from "../GenialUi";
 import { selectPlayerSelectedHexyPair } from "../selectors";
 import { onBoardHexyMouseEnter } from "../components/Board";
@@ -7,7 +7,6 @@ import {
     createBoardHexyPair,
     createDrawableHexyPairs,
     createPlayerHexyPair,
-    getMenuOptionsByGameTypeAndStatus
 } from "../utils";
 import { BoardHexyPairs, BoardSize, GameStatus, Genial, PlayerCount, UnixTimestamp } from "../types";
 
@@ -56,11 +55,6 @@ import { BoardHexyPairs, BoardSize, GameStatus, Genial, PlayerCount, UnixTimesta
 //         boardSize: params.boardSize,
 //         startTime: params.startTime,
 //         drawableHexyPairs: createDrawableHexyPairs(),
-//         menu: {
-//             open: false,
-//             entries: getMenuOptionsByGameTypeAndStatus(GameStatus.InProgress),
-//             selectedEntryIndex: 0 as const,
-//         },
 //         playerCount: params.playerCount,
 //         status: GameStatus.InProgress,
 //         gameId: params.gameId,
