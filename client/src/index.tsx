@@ -153,8 +153,10 @@ function setWsStateUponOpenOrError(e: Event) {
 function onWsOpen(e: Event): Thunk {
     return (dispatch, getState, { transport }) => {
         transport.send(JSON.stringify({
-            message_type: "register",
-            player_uuid: selectPlayerUuid(getState()),
+            type: "register",
+            payload: {
+                player_uuid: selectPlayerUuid(getState()),
+            },
         }));
         dispatch(setWsStateUponOpenOrError(e));
     }

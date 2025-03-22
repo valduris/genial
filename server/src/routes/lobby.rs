@@ -1,9 +1,7 @@
-use std::fmt::format;
 use std::io::prelude::*;
 use std::sync::{Arc};
 use parking_lot::RwLock;
 use actix_web::{Responder, web, HttpResponse};
-use futures_util::future::err;
 use rand::{thread_rng};
 use rand::seq::SliceRandom;
 use sqlx::{Error, Row};
@@ -119,13 +117,13 @@ pub async fn api_game_create(body: web::Json<CreateGameSchema>, data: web::Data<
         players: Arc::new(RwLock::new(Vec::new())),
     })));
 
-    data.broadcaster.broadcast(json!({ "type": "game_created", "game": {
-        "name": body.name,
-        "boardSize": body.boardSize,
-        "playerCount": body.playerCount,
-        "uuid": uuid,
-        "showProgress": body.showProgress
-    }}).to_string().as_str()).await;
+    // data.broadcaster.broadcast(json!({ "type": "game_created", "game": {
+    //     "name": body.name,
+    //     "boardSize": body.boardSize,
+    //     "playerCount": body.playerCount,
+    //     "uuid": uuid,
+    //     "showProgress": body.showProgress
+    // }}).to_string().as_str()).await;
 
     HttpResponse::Ok().json(serde_json::json!({ "status": "success" }))
 }
@@ -229,8 +227,6 @@ pub async fn api_lobby_game_join(body: web::Json<GameJoinSchema>, data: web::Dat
                 })
             }
         });
-
-        data.broadcaster.broadcast(payload.to_string().as_str()).await;
 
         HttpResponse::Ok().json(json!({ "type": "player_joined", "status": "ok" }))
     } else {
@@ -340,8 +336,6 @@ pub async fn api_lobby_player_ready(body: web::Json<ApiPlayerReadySchema>, data:
                 }
             });
 
-            data.broadcaster.broadcast(payload.to_string().as_str()).await;
-
             match data.players.read().get(&body.playerUuid) {
                 Some(player_rwlock) => {
                     let player_game_data = json!({
@@ -355,7 +349,7 @@ pub async fn api_lobby_player_ready(body: web::Json<ApiPlayerReadySchema>, data:
                         }
                     });
 
-                    data.broadcaster.broadcast_to(vec![body.playerUuid], player_game_data.to_string().as_str()).await;
+                    // data.broadcaster.broadcast_to(vec![body.playerUuid], player_game_data.to_string().as_str()).await;
                 }
                 None => {
                     error_log(format!("player not found with uuid: {}", &body.playerUuid));
@@ -417,8 +411,6 @@ pub async fn api_lobby_game_leave(body: web::Json<GameLeaveSchema>, data: web::D
                 })
             }
         });
-
-        data.broadcaster.broadcast(payload.to_string().as_str()).await;
 
         HttpResponse::Ok().json(json!({ "type": "player_left", "status": "ok" }))
     } else {

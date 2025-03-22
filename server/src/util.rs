@@ -4,6 +4,8 @@ use std::io::Write;
 pub fn error_log(s: String) {
     let mut file = OpenOptions::new().create(true).write(true).append(true).open("../error.log").unwrap();
 
+    println!("{}", s);
+
     if let Err(e) = writeln!(file, "{}", s) {
         eprintln!("Couldn't write to file: {}", e);
     }

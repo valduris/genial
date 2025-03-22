@@ -81,13 +81,13 @@ export const LobbyGameListConnected = connect((state: Genial) => ({
 }), { onJoinGame: onJoinGame })(LobbyGameList);
 
 export function onJoinGame(gameUuid: Uuid4): Thunk<Genial> {
-    return async (dispatch, getState, { fetchJson }) => {
-        const params: { gameUuid: Uuid4; playerUuid: Uuid4; } = {
-            gameUuid: gameUuid,
-            playerUuid: selectPlayerUuid(getState()),
-        };
-        dispatch(handleFetchResult(
-            await fetchJson("http://localhost:8080/api/game/join", { body: JSON.stringify(params) })
-        ));
+    return async (_, getState, { transport }) => {
+        transport.send(JSON.stringify({
+            type: "join_game",
+            payload: {
+                game_uuid: gameUuid,
+                player_uuid: selectPlayerUuid(getState()),
+            }
+        }));
     };
 }

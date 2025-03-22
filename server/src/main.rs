@@ -7,8 +7,7 @@ use std::{time::Duration};
 use dotenv::dotenv;
 use actix_web::{http::header, Responder, web, App, HttpServer, middleware};
 use actix_web::{error::ResponseError};
-use self::broadcast::Broadcaster;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 use std::env;
 use std::ops::Deref;
 use actix_cors::Cors;
@@ -21,21 +20,20 @@ use crate::ws::{websocket_handler, RoomsState, start_cleanup_task};
 use crate::types::{Boards, Games, Players};
 use futures_util::StreamExt;
 
-mod broadcast;
 mod types;
 mod game;
 mod util;
 mod routes;
 mod trash;
 mod ws;
+mod ws_actions;
 
 pub struct AppState {
-    broadcaster: Arc<Broadcaster>,
     postgres_pool: Pool<Postgres>,
     games: Games,
     players: Players,
     boards: Boards,
-    rooms_state: Arc<Mutex<RoomsState>>,
+    rooms_state: Arc<RwLock<RoomsState>>,
 }
 
 // 'created', // 'started', // 'finished', // 'cancelled'
@@ -46,9 +44,8 @@ async fn main() -> std::io::Result<()> {
 
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    let broadcaster = Broadcaster::create();
     let db_connection_str = env::var("DATABASE_URL").expect("$DATABASE_URL is not set");
-    let rooms_state = Arc::new(Mutex::new(RoomsState::new()));
+    let rooms_state = Arc::new(RwLock::new(RoomsState::new()));
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .acquire_timeout(Duration::from_secs(3))
@@ -62,12 +59,11 @@ async fn main() -> std::io::Result<()> {
     });
 
     let app_data = web::Data::new(AppState {
-        broadcaster: Arc::clone(&broadcaster),
         postgres_pool: pool.clone(),
         games: Games::default(),
         players: Players::default(),
         boards: Boards::default(),
-        rooms_state: Arc::new(Mutex::new(RoomsState::new())),
+        rooms_state: rooms_state,
     });
 
     load_existing_games_from_database(&app_data).await;

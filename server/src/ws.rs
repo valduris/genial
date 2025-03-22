@@ -1,23 +1,15 @@
-use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder};
-// use actix_ws::handle;
-use actix_web::web::{Bytes, Data, Payload};
-use actix_web::http::StatusCode;
-// use actix_web_actors::ws;
+use actix_web::{web, Error, HttpRequest, HttpResponse, Responder};
+use actix_web::web::{Data};
 use std::collections::{HashMap, HashSet};
-use std::ops::Deref;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::time::{interval, sleep};
 use uuid::Uuid;
-use actix_ws::{AggregatedMessage, Message};
-use serde::{Deserialize, Serialize};
-use futures_util::{
-    future::{select, Either},
-    StreamExt as _,
-};
-
+use actix_ws::{AggregatedMessage};
+use futures_util::{StreamExt as _};
 use crate::AppState;
+use crate::ws_actions::{ws_join_game, ws_register, WsMessage};
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -41,7 +33,7 @@ impl RoomsState {
         }
     }
 
-    fn join_room(&mut self, room_name: &str, client_id: &str) -> bool {
+    pub fn join_room(&mut self, room_name: &str, client_id: &str) -> bool {
         let client_added = self.rooms
             .entry(room_name.to_string())
             .or_insert_with(HashSet::new)
@@ -154,51 +146,23 @@ impl RoomsState {
     }
 }
 
-// let (res, session, msg_stream) = actix_ws::handle(&req, stream)?;
-//
-//     // spawn websocket handler (and don't await it) so that the response is returned immediately
-//     spawn_local(crate::ws_handler::chat_ws(
-//         (state.ws_tx).clone(),
-//         session,
-//         msg_stream,
-//     ));
-
 pub async fn websocket_handler(
     req: HttpRequest,
     stream: web::Payload,
-    data: web::Data<AppState>,
+    data: Data<AppState>,
 ) -> Result<HttpResponse, Error> {
-    let (res, mut session, msg_stream) = actix_ws::handle(&req, stream)?;
-    // let (res, session, msg_stream) = actix_ws::handle(&req, stream)?;
+    let (response, mut session, msg_stream) = actix_ws::handle(&req, stream)?;
     let client_id = Uuid::new_v4().to_string();
     let (client_tx, mut client_rx) = mpsc::unbounded_channel::<String>();
 
-    if let Ok(mut state) = data.rooms_state.lock() {
-        state.register_client(&client_id, client_tx.clone());
-    } else {
-        return Err(actix_web::error::ErrorInternalServerError("Failed to lock state"));
-    }
+    data.rooms_state.write().unwrap().register_client(&client_id, client_tx.clone());
 
     // Spawn task to handle the WebSocket
     actix_web::rt::spawn(async move {
         handle_websocket_connection(msg_stream, &mut session, client_id, &mut client_rx, client_tx, data).await;
     });
 
-    Ok(res)
-}
-
-#[derive(Deserialize)]
-enum WsMessageType {
-    Register {
-        player_uuid: Uuid,
-    }
-}
-
-
-#[derive(Deserialize, Debug)]
-struct WsRegistrationMessage {
-    player_uuid: Uuid,
-    message_type: String,
+    Ok(response)
 }
 
 async fn handle_websocket_connection(
@@ -207,16 +171,12 @@ async fn handle_websocket_connection(
     client_id: String,
     client_rx: &mut mpsc::UnboundedReceiver<String>,
     client_tx: mpsc::UnboundedSender<String>,
-    app_state: web::Data<AppState>,
+    app_state: Data<AppState>,
 ) {
     let mut stream = stream
         .max_frame_size(128 * 1024)
         .aggregate_continuations()
         .max_continuation_size(2 * 1024 * 1024);
-
-    // Send the client ID to the client
-    // let _ = session.text(format!("CONNECTED:{}", client_id)).await;
-    // let _ = session.text(AggregatedMessage::Text(format!("CONNECTED:{}", client_id).into())).await;
 
     let mut hb_interval = interval(HEARTBEAT_INTERVAL);
     let mut last_heartbeat = Instant::now();
@@ -236,21 +196,33 @@ async fn handle_websocket_connection(
                 }
             }
 
-            // Process incoming messages
-            message = stream.next() => {
+            message = stream.next() => { // Process incoming messages
                 match message {
                     Some(Ok(msg)) => {
                         last_heartbeat = Instant::now();
 
-                        if let Ok(mut state) = app_state.rooms_state.lock() {
-                            state.update_client_activity(&client_id);
-                        }
+                        // if let Err(e) = app_state.rooms_state.write().unwrap().update_client_activity(&client_id) {
+                        //     error_log(format!("data.rooms_state.write(), {:?}", e));
+                        // }
+
+                        app_state.rooms_state.write().unwrap().update_client_activity(&client_id);
 
                         match msg {
                             AggregatedMessage::Text(text) => {
-                                match serde_json::from_str::<WsRegistrationMessage>(&text) {
-                                    Ok(status) => println!("Received status:\n{:?}\n", status),
-                                    Err(e) => println!("Could not parse status: {}\n", e)
+                                match serde_json::from_str::<WsMessage>(&text) {
+                                    Ok(ws_message) => {
+                                        match ws_message {
+                                            // WsMessage::Register(registration_payload) => {
+                                            //     println!("{:?}", registration_payload);
+                                            //     ws_register(&app_state, session, &registration_payload).await;
+                                            // }
+                                            WsMessage::JoinGame(join_game_payload) => {
+                                                println!("{:?}", join_game_payload);
+                                                ws_join_game(&app_state, session, &join_game_payload).await;
+                                            }
+                                        }
+                                    },
+                                    Err(e) =>/**/ println!("Could not parse status: {}\n", e)
                                 }
                             }
                             AggregatedMessage::Ping(bytes) => {
@@ -298,76 +270,19 @@ async fn handle_websocket_connection(
 
     // Client disconnected - clean up
     println!("WebSocket connection closing: {}", client_id);
-    if let Ok(mut state) = app_state.rooms_state.lock() {
-        state.remove_client(&client_id);
-    }
+    app_state.rooms_state.write().unwrap().remove_client(&client_id);
 }
 
-async fn join_room(client_id: &str,room_name: &str,rooms_state: &Arc<Mutex<RoomsState>>) -> bool {
+async fn leave_room(client_id: &str, room_name: &str, rooms_state: &Arc<Mutex<RoomsState>>) {
     if let Ok(mut state) = rooms_state.lock() {
-        state.join_room(room_name, client_id)
+        state.leave_room(room_name, client_id);
     } else {
-        false
+        println!("failed to acquire rooms_state.lock()")
     }
 }
 
-async fn leave_room(client_id: &str,room_name: &str,rooms_state: &Arc<Mutex<RoomsState>>) -> bool {
-    if let Ok(mut state) = rooms_state.lock() {
-        state.leave_room(room_name, client_id)
-    } else {
-        false
-    }
-}
-
-#[derive(Deserialize)]
-pub struct JoinRoomRequest {
-    client_id: String,
-    room_name: String,
-}
-
-#[derive(Serialize)]
-pub struct RoomResponse {
-    success: bool,
-    message: String,
-}
-
-pub async fn join_room_handler(req: web::Json<JoinRoomRequest>, data: web::Data<AppState>) -> impl Responder {
-    let client_id = &req.client_id;
-    let room_name = &req.room_name;
-
-    let result = join_room(client_id, room_name, &data.rooms_state).await;
-
-    let message = if result {
-        format!("Client {} joined room {}", client_id, room_name)
-    } else {
-        "Failed to join room".to_string()
-    };
-
-    HttpResponse::Ok().json(RoomResponse {
-        success: result,
-        message,
-    })
-}
-
-pub async fn leave_room_handler(req: web::Json<JoinRoomRequest>, data: web::Data<AppState>) -> impl Responder {
-    let client_id = &req.client_id;
-    let room_name = &req.room_name;
-    let result = leave_room(client_id, room_name, &data.rooms_state).await;
-
-    let message = if result {
-        format!("Client {} left room {}", client_id, room_name)
-    } else {
-        "Failed to leave room".to_string()
-    };
-
-    HttpResponse::Ok().json(RoomResponse {
-        success: result,
-        message,
-    })
-}
-
-pub async fn cleanup_stale_clients(rooms_state: web::Data<Arc<Mutex<RoomsState>>>) -> impl Responder {
-    let removed_clients = if let Ok(mut state) = rooms_state.lock() {
+pub async fn cleanup_stale_clients(rooms_state: Data<Arc<RwLock<RoomsState>>>) -> impl Responder {
+    let removed_clients = if let Ok(mut state) = rooms_state.write() {
         state.remove_stale_clients(CLIENT_TIMEOUT)
     } else {
         Vec::new()
@@ -382,13 +297,13 @@ pub async fn cleanup_stale_clients(rooms_state: web::Data<Arc<Mutex<RoomsState>>
     }))
 }
 
-pub async fn start_cleanup_task(rooms_state: Arc<Mutex<RoomsState>>) {
+pub async fn start_cleanup_task(rooms_state: Arc<RwLock<RoomsState>>) {
     let cleanup_interval = Duration::from_secs(30); // Run cleanup every 30 seconds
 
     loop {
         sleep(cleanup_interval).await;
 
-        if let Ok(mut state) = rooms_state.lock() {
+        if let Ok(mut state) = rooms_state.write() {
             let removed = state.remove_stale_clients(CLIENT_TIMEOUT);
 
             if !removed.is_empty() {
