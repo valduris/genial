@@ -49,7 +49,7 @@ pub async fn load_existing_games_from_database(data: &web::Data<AppState>) {
             show_progress: r.show_progress,
             status: r.status.clone(),
             uuid: game_uuid,
-            players: Arc::new(RwLock::new(Vec::new())),
+            players: Vec::new(),
         })));
     });
 }
@@ -113,7 +113,7 @@ pub async fn api_game_create(body: web::Json<CreateGameSchema>, data: web::Data<
         show_progress: body.showProgress,
         status: "created".to_string(),
         uuid: uuid,
-        players: Arc::new(RwLock::new(Vec::new())),
+        players: Vec::new(),
     })));
 
     // data.broadcaster.broadcast(json!({ "type": "game_created", "game": {
@@ -201,14 +201,14 @@ pub struct ApiLobbyPlayerState {
 pub fn collect_lobby_game_player_state(data: &web::Data<AppState>, game_uuid: &Uuid) -> Vec<ApiLobbyPlayerState> {
     match data.games.read().get(game_uuid) {
          Some(game) => {
-             game.read().players.read().iter().fold(Vec::new(), |mut acc, uuid| {
+             game.read().players.iter().fold(Vec::new(), |mut acc, uuid| {
                  match data.players.read().get(&uuid) {
                      Some(player_rwlock) => {
-                         let player = player_rwlock.read();
+                         let player_read = player_rwlock.read();
                          acc.push(ApiLobbyPlayerState {
-                             ready: player.ready,
-                             id: player.id,
-                             name: player.name.clone(),
+                             ready: player_read.ready,
+                             id: player_read.id,
+                             name: player_read.name.clone(),
                          });
                      }
                      None => {

@@ -11,6 +11,7 @@ futures-util = { version = "0.3.31", default-features = false, features = ["std"
 dotenv = "0.15.0"
 sqlx = { version = "0.8.2", features=["postgres", "runtime-tokio", "uuid"] }
 serde_json = { version = "1.0.133", default-features = false, features = ["alloc", "raw_value"] }
+serde_repr = { version = "0.1.20" }
 serde = { version = "1.0.215", features = ["std", "default", "derive", "serde_derive"] }
 actix-cors = "0.7.0"
 uuid = { version = "1.15.1", features = ["v4", "serde"] }

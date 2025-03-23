@@ -68,12 +68,11 @@ pub async fn ws_join_game(app_state: &Data<AppState>, session: &mut actix_ws::Se
     }
 
     if let Some(game) = app_state.games.read().get(game_uuid) {
-        let game = game.read();
-        let mut game_players_write = game.players.write();
-        if !game_players_write.contains(player_uuid) {
-            game_players_write.push(*player_uuid);
+        let mut game_write = game.write();
+        if !game_write.players.contains(player_uuid) {
+            game_write.players.push(*player_uuid);
         }
-        drop(game_players_write);
+        drop(game_write);
 
         let payload = format!("{}", json!({
             "type": "player_joined",
@@ -112,12 +111,11 @@ pub async fn ws_leave_game(app_state: &Data<AppState>, session: &mut actix_ws::S
     }
 
     if let Some(game) = app_state.games.read().get(&game_uuid) {
-        let game = game.read();
-        let mut game_players_write = game.players.write();
-        if let Some(pos) = game_players_write.iter().position(|uuid| *uuid == *player_uuid) {
-            game_players_write.remove(pos);
+        let mut game_write = game.write();
+        if let Some(pos) = game_write.players.iter().position(|uuid| *uuid == *player_uuid) {
+            game_write.players.remove(pos);
         }
-        drop(game_players_write);
+        drop(game_write);
 
         let payload = format!("{}", json!({
             "type": "player_left",
@@ -151,57 +149,73 @@ pub async fn ws_ready_change(data: &Data<AppState>, session: &mut actix_ws::Sess
 
     match data.games.read().get(&ready_change_payload.game_uuid) {
         Some(game) => {
-            let game_read = game.read();
-            if let Some(game_players_write) = Some(game_read.players.clone().write()) {
-                // if all players are ready, shuffle player uuid vec, pick a random index and assign move, next player = index + 1 (wraps)
-                if game_players_write.iter().all(|uuid| {
-                    let player_read = data.players.read();
-                    let ready = player_read.get(uuid).unwrap().read().ready;
-                    drop(player_read);
-                    ready
-                }) {
-                    game_players_write.clone().shuffle(&mut thread_rng());
-                    let first_player_to_move = game_players_write.choose(&mut thread_rng()).copied();
-                    drop(game_players_write);
-                    let hex_pair_bag = game_read.hex_pairs_in_bag.clone();
+            let mut game_write = game.write();
+            // if all players are ready, shuffle player uuid vec, pick a random index and assign move, next player = index + 1 (wraps)
+            if game_write.players.iter().all(|uuid| {
+                let player_read = data.players.read();
+                let ready = player_read.get(uuid).unwrap().read().ready;
+                drop(player_read);
+                ready
+            }) {
+                game_write.players.clone().shuffle(&mut thread_rng());
+                let first_player_to_move = game_write.players.choose(&mut thread_rng()).copied();
+                let hex_pair_bag = game_write.hex_pairs_in_bag.clone();
 
-                    game_read.players.read().iter().for_each(|player_uuid| {
-                        match players_read.get(&player_uuid) {
-                            Some(player_rwlock) => {
-                                let mut player_write = player_rwlock.write();
-                                for i in 0..5 {
-                                    match hex_pair_bag.clone().take_random_hex_pair() {
-                                        Some(hex_pair) => {
-                                            player_write.hex_pairs.insert(i, hex_pair);
-                                        }
-                                        None => {}
+                game_write.players.iter().for_each(|player_uuid| {
+                    match players_read.get(&player_uuid) {
+                        Some(player_rwlock) => {
+                            let mut player_write = player_rwlock.write();
+                            for i in 0..6 {
+                                match hex_pair_bag.clone().take_random_hex_pair() {
+                                    Some(hex_pair) => {
+                                        player_write.hex_pairs.insert(i, hex_pair);
                                     }
+                                    None => {}
                                 }
+                            }
 
-                                data.rooms_state.read().unwrap().clients.get(&ready_change_payload.player_uuid.to_string()).unwrap().send(
-                                    json!({
-                                        "type": "player_game_data",
-                                        "data": {
-                                            "players": {
-                                                &ready_change_payload.player_uuid.to_string(): {
-                                                    "hexPairs": player_write.hex_pairs,
-                                                }
+                            data.rooms_state.read().unwrap().clients.get(&ready_change_payload.player_uuid.to_string()).unwrap().send(
+                                json!({
+                                    "type": "player_game_data",
+                                    "data": {
+                                        "players": {
+                                            &ready_change_payload.player_uuid.to_string(): {
+                                                "hexPairs": player_write.hex_pairs,
                                             }
                                         }
-                                    }).to_string()
-                                ).unwrap();
-                            }
-                            None => {
-                                error_log(format!("player not found in players state: {}", &player_uuid));
-                            }
-                        }
-                    });
+                                    }
+                                }).to_string()
+                            ).unwrap();
 
-                    drop(game_read);
-                    let mut game_write = game.write();
-                    game_write.player_to_move = first_player_to_move;
-                    game_write.status = "in_progress".to_string();
-                }
+
+                            data.rooms_state.read().unwrap().broadcast_to_room(
+                                &ready_change_payload.game_uuid.to_string(),
+                                json!({
+                                    "type": "game_data",
+                                    "data": {
+                                        "games": {
+                                            &ready_change_payload.game_uuid.to_string(): {
+                                                "status": "in_progress",
+                                                "player_move_order": game_write.players,
+                                            },
+                                        },
+                                        "players": {
+
+                                        }
+                                    }
+                                }).to_string().as_str(),
+                                None
+                            );
+                        }
+                        None => {
+                            error_log(format!("player not found in players state: {}", &player_uuid));
+                        }
+                    }
+                });
+
+                game_write.player_to_move = first_player_to_move;
+                game_write.status = "in_progress".to_string();
+                drop(game_write);
             }
 
             data.rooms_state.read().unwrap().broadcast_to_room(

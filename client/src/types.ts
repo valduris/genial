@@ -16,6 +16,8 @@ export interface PlayerHexy {
 
 export type Color = "red" | "yellow" | "orange" | "blue" | "green" | "violet";
 
+export type ColorCode = 0 | 1 | 2 | 3 | 4 | 5;
+
 export type BoardSize = 6 | 7 | 8;
 
 export type ProgressValue = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18;

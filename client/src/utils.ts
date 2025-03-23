@@ -4,7 +4,7 @@ import {
     BoardHexyPair,
     BoardHexyPairs,
     BoardSize,
-    Color,
+    Color, ColorCode,
     Direction,
     DrawableHexyPair,
     DrawableHexyPairs,
@@ -227,4 +227,17 @@ export function handleFetchResult(result: { status: "ok" | "error"; type: string
             dispatch(setGenialState({ error: "An error occurred while fetching data..." }));
         }
     }
+}
+
+export function colorCodeToColor(colorCode: ColorCode): Color {
+    const map: Record<ColorCode, Color> = {
+        0: "red",
+        1: "yellow",
+        2: "orange",
+        3: "blue",
+        4: "green",
+        5: "violet",
+    };
+
+    return map[colorCode];
 }

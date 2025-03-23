@@ -6,6 +6,7 @@ use uuid::Uuid;
 use serde::Serializer;
 use crate::game::HexPairsInBag;
 use crate::util::error_log;
+use serde_repr::*;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Copy, Clone)]
 pub struct BoardHex {
@@ -19,14 +20,15 @@ pub struct PlayerHex {
     color: Color,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Copy, Hash, Eq)]
+#[derive(Debug, Serialize_repr, Deserialize_repr, Clone, PartialEq, Copy, Hash, Eq)]
+#[repr(u8)]
 pub enum Color {
-    Red,
-    Yellow,
-    Orange,
-    Blue,
-    Green,
-    Violet,
+    Red = 0,
+    Yellow = 1,
+    Orange = 2,
+    Blue = 3,
+    Green = 4,
+    Violet = 5,
 }
 
 impl Color {
@@ -124,7 +126,7 @@ pub struct Game {
     pub status: String, // "created", "in_progress", "ended"
     pub uuid: Uuid,
     pub player_count: i8,
-    pub players: Arc<RwLock<Vec<Uuid>>>, // ordered by move sequence
+    pub players: Vec<Uuid>, // ordered by move sequence
 }
 
 pub type Board = Vec<BoardHex>;
