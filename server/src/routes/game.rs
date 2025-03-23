@@ -1,3 +1,4 @@
+use std::ops::Index;
 use actix_web::{web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -40,12 +41,12 @@ pub async fn api_game_place_hex_pair(body: web::Json<PlaceHexPairSchema>, data: 
     let mut player_hex_pairs = player.read().hex_pairs.clone();
     match player_hex_pairs.clone().get(body.hexPairIndex) {
         Some(player_hex_pair) => {
-            player_hex_pairs.remove(body.hexPairIndex);
+            player_hex_pairs[body.hexPairIndex] = None;
 
             match data.boards.read().get(&body.gameUuid) {
                 Some(board) => {
-                    let board_hex_1 = BoardHex { color: player_hex_pair[0].clone(), x: body.x1, y: body.y1 };
-                    let board_hex_2 = BoardHex { color: player_hex_pair[1].clone(), x: body.x2, y: body.y2 };
+                    let board_hex_1 = BoardHex { color: player_hex_pair.unwrap()[0].clone(), x: body.x1, y: body.y1 };
+                    let board_hex_2 = BoardHex { color: player_hex_pair.unwrap()[1].clone(), x: body.x2, y: body.y2 };
                     let board_hex_pair: BoardHexPair = [board_hex_1, board_hex_2];
                     let board_read = board.read();
                     if !is_valid_hex_pair_placement(&board_read, game_read.board_size, board_hex_pair) {
@@ -81,10 +82,10 @@ pub async fn api_game_place_hex_pair(body: web::Json<PlaceHexPairSchema>, data: 
             // draw random hex pairs from available hex pair list, insert into players hex pair list
             if player_writable.moves_in_turn == 0 {
                 let hex_pairs_in_bag = games.get(&body.gameUuid).unwrap().read().hex_pairs_in_bag.clone();
-                while player_writable.hex_pairs.len() < 6 {
+                while let Some(empty_index) = player_writable.hex_pairs.iter().position(|hex_pair| hex_pair.is_none()) {
                     match hex_pairs_in_bag.clone().take_random_hex_pair() {
                         Some(hex_pair) => {
-                            player_writable.hex_pairs.push(hex_pair);
+                            player_writable.hex_pairs[empty_index] = Some(hex_pair);
                         }
                         None => {
                             error_log(format!("hex_pairs_in_bag is empty for game: {}", body.gameUuid));

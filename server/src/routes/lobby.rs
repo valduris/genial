@@ -80,7 +80,7 @@ pub async fn load_existing_players_from_database(data: &web::Data<AppState>) {
             game_uuid: if r.game_uuid.clone().is_none() { None } else { Some(Uuid::parse_str(r.game_uuid.clone().unwrap().as_str()).unwrap()) },
             id: r.id,
             ready: false,
-            hex_pairs: Vec::new(),
+            hex_pairs: [None, None, None, None, None, None],
             moves_in_turn: 0,
             progress: Progress::new(),
         })));
@@ -264,7 +264,7 @@ pub async fn api_player_info(body: web::Json<PlayerInfo>, data: web::Data<AppSta
                 ready: false,
                 uuid: body.playerUuid,
                 id: player_id,
-                hex_pairs: Vec::new(),
+                hex_pairs: [None, None, None, None, None, None],
                 moves_in_turn: 0,
                 progress: Progress::new(),
             })));

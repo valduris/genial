@@ -114,7 +114,7 @@ pub type BoardHexPair = [BoardHex; 2];
 
 pub type HexPair = [Color; 2];
 
-pub type HexPairs = Vec<HexPair>;
+pub type HexPairs = [Option<HexPair>; 6];
 
 pub struct Game {
     pub admin_uuid: Uuid,

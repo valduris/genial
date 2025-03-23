@@ -1,6 +1,7 @@
-import { PlayerHexyPairs, Thunk, Uuid4 } from "./types";
+import { ColorCode, PlayerHexyPair, PlayerHexyPairs, Thunk, Uuid4 } from "./types";
 import * as immer from "immer";
 import { setGenialState } from "./index";
+import { colorCodeToColor } from "./utils";
 
 // {
 //     "type": "player_joined"
@@ -34,11 +35,14 @@ interface PlayerLobbyGameData {
     data: LobbyGameData;
 }
 
+export type ServerPlayerHexPair = [ColorCode, ColorCode] | null;
+export type ServerPlayerHexPairs = [ServerPlayerHexPair, ServerPlayerHexPair, ServerPlayerHexPair, ServerPlayerHexPair, ServerPlayerHexPair, ServerPlayerHexPair];
+
 interface PlayerGameState {
     type: "player_game_data";
     data: {
         players: Record<Uuid4, {
-            hexPairs: PlayerHexyPairs;
+            hexPairs: ServerPlayerHexPairs;
         }>;
     };
 }
@@ -65,8 +69,13 @@ export function onWebSocketMessage(payload: WsData): Thunk {
         } else if (payload.type === "player_game_data") {
             dispatch(setGenialState(immer.produce(getState(), state => {
                 const playedUuid = Object.keys(payload.data.players)[0];
-                console.log("payload.data.players[playedUuid].hexPairs;", payload.data.players[playedUuid].hexPairs);
-                state.player.hexyPairs = payload.data.players[playedUuid].hexPairs;
+                const playerHexPairs = payload.data.players[playedUuid].hexPairs.map(hexPairsInColorCode => {
+                    if (hexPairsInColorCode === null) {
+                        return undefined;
+                    }
+                    return hexPairsInColorCode.map(h => colorCodeToColor(h));
+                }) as PlayerHexyPairs;
+                state.player.hexyPairs = playerHexPairs;
             })));
         }
         console.log("onWebSocketMessage p s", payload, getState());

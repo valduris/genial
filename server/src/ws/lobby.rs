@@ -85,7 +85,7 @@ pub async fn ws_join_game(app_state: &Data<AppState>, session: &mut actix_ws::Se
             }
         }));
 
-        if let Err(e) = session.text(payload).await {
+        if let Err(_) = session.text(payload).await {
             error_log(format!("ws connection closed (ws_join_game)"));
         }
     } else {
@@ -128,7 +128,7 @@ pub async fn ws_leave_game(app_state: &Data<AppState>, session: &mut actix_ws::S
             }
         }));
 
-        if let Err(e) = session.text(payload).await {
+        if let Err(_) = session.text(payload).await {
             error_log(format!("ws connection closed (ws_join_game)"));
         }
     } else {
@@ -165,16 +165,16 @@ pub async fn ws_ready_change(data: &Data<AppState>, session: &mut actix_ws::Sess
                     match players_read.get(&player_uuid) {
                         Some(player_rwlock) => {
                             let mut player_write = player_rwlock.write();
-                            for i in 0..6 {
+                            for i in 0..5 {
                                 match hex_pair_bag.clone().take_random_hex_pair() {
                                     Some(hex_pair) => {
-                                        player_write.hex_pairs.insert(i, hex_pair);
+                                        player_write.hex_pairs[i] = Some(hex_pair);
                                     }
                                     None => {}
                                 }
                             }
 
-                            data.rooms_state.read().unwrap().clients.get(&ready_change_payload.player_uuid.to_string()).unwrap().send(
+                            let _ = data.rooms_state.read().unwrap().clients.get(&ready_change_payload.player_uuid.to_string()).unwrap().send(
                                 json!({
                                     "type": "player_game_data",
                                     "data": {
@@ -185,7 +185,7 @@ pub async fn ws_ready_change(data: &Data<AppState>, session: &mut actix_ws::Sess
                                         }
                                     }
                                 }).to_string()
-                            ).unwrap();
+                            );
 
 
                             data.rooms_state.read().unwrap().broadcast_to_room(
