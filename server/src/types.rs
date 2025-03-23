@@ -121,7 +121,7 @@ pub struct Game {
     pub player_to_move: Option<Uuid>,
     pub name: String,
     pub show_progress: bool,
-    pub status: String,
+    pub status: String, // "created", "in_progress", "ended"
     pub uuid: Uuid,
     pub player_count: i8,
     pub players: Arc<RwLock<Vec<Uuid>>>, // ordered by move sequence

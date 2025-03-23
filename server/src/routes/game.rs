@@ -81,7 +81,7 @@ pub async fn api_game_place_hex_pair(body: web::Json<PlaceHexPairSchema>, data: 
             // draw random hex pairs from available hex pair list, insert into players hex pair list
             if player_writable.moves_in_turn == 0 {
                 let hex_pairs_in_bag = games.get(&body.gameUuid).unwrap().read().hex_pairs_in_bag.clone();
-                while player_writable.hex_pairs.len() < 6 /* && hex_pairs_in_bag. */ {
+                while player_writable.hex_pairs.len() < 6 {
                     match hex_pairs_in_bag.clone().take_random_hex_pair() {
                         Some(hex_pair) => {
                             player_writable.hex_pairs.push(hex_pair);
@@ -100,6 +100,6 @@ pub async fn api_game_place_hex_pair(body: web::Json<PlaceHexPairSchema>, data: 
             return HttpResponse::BadRequest().body(message);
         }
     }
-    // // data.broadcaster.broadcast_to(<HashMap<Uuid, Player> as Clone>::clone(&game.players).into_keys().collect(), json!({ "type": "hexy_pair_placed", "data": game }).to_string().as_str()).await;
+
     return HttpResponse::Ok().json(serde_json::json!({ "status": "success", "operation": "place_hexy_pair" }));
 }

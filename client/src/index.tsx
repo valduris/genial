@@ -125,7 +125,7 @@ export async function initialize(): Promise<void> {
     });
 
     const proto = window.location.protocol.startsWith('https') ? 'wss' : 'ws'
-    const wsUri = `${proto}://${"localhost"}:8080/ws` //getOrCreatePlayerUuidForUnauthenticatedPlayer()
+    const wsUri = `${proto}://${"localhost"}:8080/ws/${getOrCreatePlayerUuidForUnauthenticatedPlayer()}`;
     const webSocket = new WebSocket(wsUri);
 
     webSocket.addEventListener("open", (e: Event) => store.dispatch(onWsOpen(e)), false);

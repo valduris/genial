@@ -13,7 +13,7 @@ sqlx = { version = "0.8.2", features=["postgres", "runtime-tokio", "uuid"] }
 serde_json = { version = "1.0.133", default-features = false, features = ["alloc", "raw_value"] }
 serde = { version = "1.0.215", features = ["std", "default", "derive", "serde_derive"] }
 actix-cors = "0.7.0"
-uuid = { version = "1.11.0", features = ["v4", "serde"] }
+uuid = { version = "1.15.1", features = ["v4", "serde"] }
 tokio = { version = "1.42.0", features = ["sync", "io-util", "rt", "time", "macros"] }
 tokio-stream = "0.1.16"
 rand = "0.8.5"

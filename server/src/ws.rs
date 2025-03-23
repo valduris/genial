@@ -1,3 +1,5 @@
+mod lobby;
+
 use actix_web::{web, Error, HttpRequest, HttpResponse, Responder};
 use actix_web::web::{Data};
 use std::collections::{HashMap, HashSet};
@@ -9,7 +11,7 @@ use uuid::Uuid;
 use actix_ws::{AggregatedMessage};
 use futures_util::{StreamExt as _};
 use crate::AppState;
-use crate::ws_actions::{ws_join_game, ws_register, WsMessage};
+use crate::ws::lobby::{ws_ready_change, ws_join_game, ws_leave_game, WsMessage};
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -49,7 +51,7 @@ impl RoomsState {
         client_added
     }
 
-    fn leave_room(&mut self, room_name: &str, client_id: &str) -> bool {
+    pub fn leave_room(&mut self, room_name: &str, client_id: &str) -> bool {
         let mut client_removed = false;
 
         if let Some(room) = self.rooms.get_mut(room_name) {
@@ -150,19 +152,26 @@ pub async fn websocket_handler(
     req: HttpRequest,
     stream: web::Payload,
     data: Data<AppState>,
+    path: web::Path<String>,
 ) -> Result<HttpResponse, Error> {
-    let (response, mut session, msg_stream) = actix_ws::handle(&req, stream)?;
-    let client_id = Uuid::new_v4().to_string();
-    let (client_tx, mut client_rx) = mpsc::unbounded_channel::<String>();
+    match Uuid::parse_str(path.into_inner().as_str()) {
+        Ok(player_uuid) => {
+            let (response, mut session, msg_stream) = actix_ws::handle(&req, stream)?;
+            let (client_tx, mut client_rx) = mpsc::unbounded_channel::<String>();
 
-    data.rooms_state.write().unwrap().register_client(&client_id, client_tx.clone());
+            data.rooms_state.write().unwrap().register_client(&player_uuid.to_string(), client_tx.clone());
 
-    // Spawn task to handle the WebSocket
-    actix_web::rt::spawn(async move {
-        handle_websocket_connection(msg_stream, &mut session, client_id, &mut client_rx, client_tx, data).await;
-    });
+            // Spawn task to handle the WebSocket
+            actix_web::rt::spawn(async move {
+                handle_websocket_connection(msg_stream, &mut session, player_uuid.to_string(), &mut client_rx, client_tx, data).await;
+            });
 
-    Ok(response)
+            Ok(response)
+        }
+        Err(_) => {
+            Ok(HttpResponse::BadRequest().finish())
+        }
+    }
 }
 
 async fn handle_websocket_connection(
@@ -219,6 +228,14 @@ async fn handle_websocket_connection(
                                             WsMessage::JoinGame(join_game_payload) => {
                                                 println!("{:?}", join_game_payload);
                                                 ws_join_game(&app_state, session, &join_game_payload).await;
+                                            }
+                                            WsMessage::LeaveGame(leave_game_payload) => {
+                                                println!("{:?}", leave_game_payload);
+                                                ws_leave_game(&app_state, session, &leave_game_payload).await;
+                                            }
+                                            WsMessage::ReadyChange(check_ready_payload) => {
+                                                println!("{:?}", check_ready_payload);
+                                                ws_ready_change(&app_state, session, &check_ready_payload).await;
                                             }
                                         }
                                     },

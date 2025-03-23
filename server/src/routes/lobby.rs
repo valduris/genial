@@ -1,9 +1,8 @@
+use std::fmt::DebugMap;
 use std::io::prelude::*;
 use std::sync::{Arc};
 use parking_lot::RwLock;
 use actix_web::{Responder, web, HttpResponse};
-use rand::{thread_rng};
-use rand::seq::SliceRandom;
 use sqlx::{Error, Row};
 use serde_json::json;
 use serde::{Deserialize, Serialize};
@@ -112,7 +111,7 @@ pub async fn api_game_create(body: web::Json<CreateGameSchema>, data: web::Data<
         hex_pairs_in_bag: HexPairsInBag::new(),
         name: body.name.clone(),
         show_progress: body.showProgress,
-        status: "in_progress".to_string(),
+        status: "created".to_string(),
         uuid: uuid,
         players: Arc::new(RwLock::new(Vec::new())),
     })));
@@ -191,49 +190,6 @@ pub async fn api_get_lobby_game(body: web::Json<ApiLobbyGameSchema>, state: web:
         HttpResponse::NotFound().json(json!({ "status": "error" }))
     }
 }
-#[derive(Serialize, Deserialize, Debug)]
-pub struct GameJoinSchema {
-    pub gameUuid: Uuid,
-    pub playerUuid: Uuid,
-}
-pub async fn api_lobby_game_join(body: web::Json<GameJoinSchema>, data: web::Data<AppState>) -> HttpResponse {
-    match data.players.read().get(&body.playerUuid) {
-        None => {
-            error_log(format!("player not found (api_lobby_game_join) with uuid: {}", &body.playerUuid));
-            return HttpResponse::NotFound().json(json!({ "type": "player_joined", "status": "error" }));
-        }
-        Some(player_rwlock) => {
-            let mut player = player_rwlock.write();
-            player.game_uuid = Some(body.gameUuid.clone());
-            player.ready = false;
-        }
-    }
-
-    if let Some(game) = data.games.read().get(&body.gameUuid) {
-        let game = game.read();
-        let mut game_players_write = game.players.write();
-        if !game_players_write.contains(&body.playerUuid) {
-            game_players_write.push(body.playerUuid);
-        }
-        drop(game_players_write);
-
-        let payload = json!({
-            "type": "player_joined",
-            "data": {
-                "games": json!({
-                    &body.gameUuid.to_string(): {
-                        "players": collect_lobby_game_player_state(&data, &body.gameUuid),
-                    }
-                })
-            }
-        });
-
-        HttpResponse::Ok().json(json!({ "type": "player_joined", "status": "ok" }))
-    } else {
-        error_log(format!("game not found (api_lobby_game_join) with uuid: {}", &body.gameUuid));
-        HttpResponse::NotFound().json(json!({ "type": "player_joined", "status": "error" }))
-    }
-}
 
 #[derive(Serialize)]
 pub struct ApiLobbyPlayerState {
@@ -266,156 +222,6 @@ pub fn collect_lobby_game_player_state(data: &web::Data<AppState>, game_uuid: &U
             error_log(format!("game not found while collecting player info for game: {}", &game_uuid));
             Vec::new()
         }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ApiPlayerReadySchema {
-    pub playerUuid: Uuid,
-    pub gameUuid: Uuid,
-    pub ready: bool,
-}
-
-pub async fn api_lobby_player_ready(body: web::Json<ApiPlayerReadySchema>, data: web::Data<AppState>) -> HttpResponse {
-    let players_read = data.players.read();
-    match players_read.get(&body.playerUuid) {
-        Some(player) => {
-            player.write().ready = body.ready;
-        }
-        None => {
-            error_log(format!("player not found in player ready route {}", &body.playerUuid));
-            return HttpResponse::NotFound().json(json!({ "type": "player_ready", "status": "error" }));
-        }
-    }
-
-    match data.games.read().get(&body.gameUuid) {
-        Some(game) => {
-            let game_read = game.read();
-            if let Some(game_players_write) = Some(game_read.players.clone().write()) {
-                // if all players are ready, shuffle player uuid vec, pick a random index and assign move, next player = index + 1 (wraps)
-                if game_players_write.iter().all(|uuid| {
-                    data.players.read().get(uuid).unwrap().read().ready
-                }) {
-                    game_players_write.clone().shuffle(&mut thread_rng());
-                    let first_player_to_move = game_players_write.choose(&mut thread_rng()).copied();
-                    drop(game_players_write);
-                    let hex_pair_bag = game_read.hex_pairs_in_bag.clone();
-
-                    game_read.players.read().iter().for_each(|player_uuid| {
-                        match players_read.get(&player_uuid) {
-                            Some(player_rwlock) => {
-                                for i in 0..5 {
-                                    match hex_pair_bag.clone().take_random_hex_pair() {
-                                        Some(hex_pair) => {
-                                            player_rwlock.write().hex_pairs.insert(i, hex_pair);
-                                        }
-                                        None => {}
-                                    }
-                                }
-                            }
-                            None => {
-                                error_log(format!("player not found in players state: {}", &player_uuid));
-                            }
-                        }
-                    });
-
-                    drop(game_read);
-                    let mut game_write = game.write();
-                    game_write.player_to_move = first_player_to_move;
-                }
-            }
-
-            let payload = json!({
-                "type": "player_ready",
-                "data": {
-                    "games": json!({
-                        &body.gameUuid.to_string(): {
-                            "players": collect_lobby_game_player_state(&data, &body.gameUuid),
-                        }
-                    })
-                }
-            });
-
-            match data.players.read().get(&body.playerUuid) {
-                Some(player_rwlock) => {
-                    let player_game_data = json!({
-                        "type": "player_game_data",
-                        "data": {
-                            "players": {
-                                &body.playerUuid.to_string(): {
-                                    "hexPairs": player_rwlock.read().hex_pairs,
-                                }
-                            }
-                        }
-                    });
-
-                    // data.broadcaster.broadcast_to(vec![body.playerUuid], player_game_data.to_string().as_str()).await;
-                }
-                None => {
-                    error_log(format!("player not found with uuid: {}", &body.playerUuid));
-                    return HttpResponse::NotFound().json(json!({ "type": "player_ready", "status": "error" }));
-                }
-            }
-
-            HttpResponse::Ok().json(json!({ "type": "player_ready", "status": "ok" }))
-        }
-        None => {
-            error_log(format!("Game not found with uuid: {}", &body.gameUuid));
-            HttpResponse::NotFound().json(json!({ "type": "player_ready", "status": "error" }))
-        }
-    }
-
-    // if (all players ready) {
-    //     assign move to player randomly
-    //     start timer
-    //     deal random hexys from drawables to all players
-    // }
-    // println!("player_uuids {:?} ", player_uuids);
-    // data.broadcaster.broadcast(json!({ "type": "player_ready", "value": row }).to_string().as_str()).await;
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct GameLeaveSchema {
-    pub playerUuid: Uuid,
-    pub gameUuid: Uuid,
-}
-
-pub async fn api_lobby_game_leave(body: web::Json<GameLeaveSchema>, data: web::Data<AppState>) -> impl Responder {
-    match data.players.read().get(&body.playerUuid) {
-        Some(player) => {
-            let mut player_write = player.write();
-            player_write.game_uuid = None;
-            player_write.ready = false;
-        }
-        None => {
-            error_log(format!("player not found while leaving the game {}", &body.playerUuid));
-            return HttpResponse::NotFound().json(json!({ "type": "player_left", "status": "error" }));
-        }
-    }
-
-    if let Some(game) = data.games.read().get(&body.gameUuid) {
-        let game = game.read();
-        let mut game_players_write = game.players.write();
-        if let Some(pos) = game_players_write.iter().position(|uuid| *uuid == body.playerUuid) {
-            game_players_write.remove(pos);
-        }
-        drop(game_players_write);
-
-        let payload = json!({
-            "type": "player_left",
-            "data": {
-                "games": json!({
-                    &body.gameUuid.to_string(): {
-                        "players": collect_lobby_game_player_state(&data, &body.gameUuid),
-                    }
-                })
-            }
-        });
-
-        HttpResponse::Ok().json(json!({ "type": "player_left", "status": "ok" }))
-    } else {
-        error_log(format!("game not found while leaving the game {}", &body.gameUuid));
-        HttpResponse::NotFound().json(json!({ "type": "player_left", "status": "error" }))
     }
 }
 

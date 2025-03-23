@@ -112,7 +112,7 @@ export const LobbyGameConnected = connect((state: Genial) => {
 }, { onLeaveGame: onLeaveGame, onReadyChange: onReadyChange })(LobbyGameComponent);
 
 export function onReadyChange(): Thunk {
-    return async (dispatch, getState) => {
+    return async (dispatch, getState, { transport }) => {
         const state = getState();
         const lobbyGameUuid = selectCurrentGameUuid(state);
 
@@ -133,9 +133,14 @@ export function onReadyChange(): Thunk {
             ready = player.ready;
         })));
 
-        dispatch(handleFetchResult(await fetchJson("http://localhost:8080/api/game/ready", {
-            body: JSON.stringify({ playerUuid: selectPlayerUuid(getState()), ready: ready, gameUuid: lobbyGameUuid })
-        })));
+        transport.send(JSON.stringify({
+            type: "ready_change",
+            payload: {
+                player_uuid: selectPlayerUuid(getState()),
+                game_uuid: lobbyGameUuid,
+                ready: ready,
+            },
+        }));
     }
 }
 
@@ -143,8 +148,11 @@ export function onLeaveGame(): Thunk {
     return async (_, getState, { transport }) => {
         const state = getState();
         transport.send(JSON.stringify({
-            playerUuid: selectPlayerUuid(state),
-            gameUuid: selectCurrentGameUuid(state),
+            type: "leave_game",
+            payload: {
+                player_uuid: selectPlayerUuid(state),
+                game_uuid: selectCurrentGameUuid(state),
+            },
         }));
     };
 }

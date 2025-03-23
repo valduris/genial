@@ -15,7 +15,7 @@ use sqlx::postgres::{PgPoolOptions};
 use sqlx::{FromRow, Pool, Postgres, Row};
 use serde::{Deserialize, Serialize};
 use crate::routes::game::api_game_place_hex_pair;
-use crate::routes::lobby::{api_game_create, api_get_games, api_get_lobby_game, api_lobby_game_join, api_lobby_game_leave, api_lobby_player_ready, api_player_info, api_player_register, load_existing_games_from_database, load_existing_players_from_database};
+use crate::routes::lobby::{api_game_create, api_get_games, api_get_lobby_game, api_player_info, api_player_register, load_existing_games_from_database, load_existing_players_from_database};
 use crate::ws::{websocket_handler, RoomsState, start_cleanup_task};
 use crate::types::{Boards, Games, Players};
 use futures_util::StreamExt;
@@ -26,7 +26,6 @@ mod util;
 mod routes;
 mod trash;
 mod ws;
-mod ws_actions;
 
 pub struct AppState {
     postgres_pool: Pool<Postgres>,
@@ -35,8 +34,6 @@ pub struct AppState {
     boards: Boards,
     rooms_state: Arc<RwLock<RoomsState>>,
 }
-
-// 'created', // 'started', // 'finished', // 'cancelled'
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -51,7 +48,7 @@ async fn main() -> std::io::Result<()> {
         .acquire_timeout(Duration::from_secs(3))
         .connect(&db_connection_str)
         .await
-        .expect("can't connect to database");
+        .expect("could not connect to database");
 
     let cleanup_state = rooms_state.clone();
     tokio::spawn(async move {
@@ -83,14 +80,11 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .route("/api/games", web::get().to(api_get_games))
             .route("/api/game", web::post().to(api_game_create))
-            .route("/api/game/join", web::post().to(api_lobby_game_join))
-            .route("/api/game/leave", web::post().to(api_lobby_game_leave))
             .route("/api/lobby_game", web::post().to(api_get_lobby_game))
             .route("/api/player/register", web::post().to(api_player_register))
             .route("/api/player/info", web::post().to(api_player_info))
-            .route("/api/game/ready", web::post().to(api_lobby_player_ready))
             .route("/api/game/placeHexy", web::post().to(api_game_place_hex_pair))
-            .route("/ws", web::get().to(websocket_handler))
+            .route("/ws/{user_id}", web::get().to(websocket_handler))
             .wrap(middleware::NormalizePath::trim())
     })
     .bind(format!("{}:{}", "127.0.0.1", "8080"))?
