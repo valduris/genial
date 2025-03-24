@@ -106,11 +106,9 @@ export interface Game {
     players: Record<number, {
         name: string;
         progress?: Progress;
-        movesInTurn?: number;
     }>;
     hexyPairs: BoardHexyPairs;
     name: string;
-    playerCount: PlayerCount;
     showProgress: boolean;
     status: GameStatus;
     uuid: Uuid4;

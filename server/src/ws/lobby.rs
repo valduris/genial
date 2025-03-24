@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use actix_web::{web, HttpResponse};
 use actix_web::web::Data;
 use serde::{Deserialize, Serialize};
@@ -7,6 +8,7 @@ use rand::seq::SliceRandom;
 use uuid::Uuid;
 use crate::AppState;
 use crate::routes::lobby::collect_lobby_game_player_state;
+use crate::types::Player;
 use crate::util::error_log;
 
 #[derive(Deserialize, Debug)]
@@ -195,6 +197,12 @@ pub async fn ws_ready_change(data: &Data<AppState>, session: &mut actix_ws::Sess
                                             &ready_change_payload.game_uuid.to_string(): {
                                                 "status": "in_progress",
                                                 "player_move_order": game_read.players,
+                                                "board_size": game_read.board_size,
+                                                "hexy_pairs": [],
+                                                "name": game_read.name,
+                                                "show_progress": game_read.show_progress,
+                                                "uuid": game_read.uuid,
+                                                "players": HashMap::<Uuid, Player>::new(),
                                             },
                                         },
                                     }

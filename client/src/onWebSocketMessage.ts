@@ -1,7 +1,7 @@
-import { ColorCode, GameStatus, PlayerHexyPairs, Thunk, Uuid4 } from "./types";
+import { ColorCode, Game, GameStatus, PlayerHexyPairs, Thunk, Uuid4 } from "./types";
 import * as immer from "immer";
 import { setGenialState } from "./index";
-import { colorCodeToColor } from "./utils";
+import { colorCodeToColor, createEmptyProgress } from "./utils";
 
 interface LobbyGameData {
     games: Record<Uuid4, {
@@ -34,7 +34,13 @@ interface GameState {
     data: {
         games: Record<Uuid4, {
             player_move_order: Uuid4[];
-            status: GameStatus;
+            status: Game["status"];
+            board_size: Game["boardSize"];
+            hexy_pairs: Game["hexyPairs"];
+            name: Game["name"];
+            show_progress: Game["showProgress"];
+            uuid: Game["uuid"];
+            players: Game["players"];
         }>;
     };
 }
@@ -65,14 +71,29 @@ export function onWebSocketMessage(payload: WsData): Thunk {
                     if (hexPairsInColorCode === null) {
                         return undefined;
                     }
-                    return hexPairsInColorCode.map(h => colorCodeToColor(h));
+                    return hexPairsInColorCode.map(h => ({
+                        color: colorCodeToColor(h),
+                        selected: false,
+                    }));
                 }) as PlayerHexyPairs;
                 state.player.hexyPairs = playerHexPairs;
             })));
         } else if (payload.type === "game_state") {
             dispatch(setGenialState(immer.produce(getState(), state => {
                 for (const gameUuid in payload.data.games) {
-                    state.lobbyGames[gameUuid].status = payload.data.games[gameUuid].status;
+                    const serverGame = payload.data.games[gameUuid];
+                    // state.lobbyGames[gameUuid].status = .status;
+                    state.game = {
+                        status: serverGame.status,
+                        boardSize: serverGame.board_size,
+                        hexyPairs: serverGame.hexy_pairs,
+                        name: serverGame.name,
+                        showProgress: serverGame.show_progress,
+                        uuid: serverGame.uuid,
+                        adminId: 0, // TODO
+                        players: serverGame.players,
+                    }
+                    state.player.progress = createEmptyProgress();
                 }
             })));
         }

@@ -50,6 +50,7 @@ pub async fn load_existing_games_from_database(data: &web::Data<AppState>) {
             status: r.status.clone(),
             uuid: game_uuid,
             players: Vec::new(),
+            admin_id: 0,
         })));
     });
 }
@@ -114,6 +115,7 @@ pub async fn api_game_create(body: web::Json<CreateGameSchema>, data: web::Data<
         status: "created".to_string(),
         uuid: uuid,
         players: Vec::new(),
+        admin_id: 0,
     })));
 
     // data.broadcaster.broadcast(json!({ "type": "game_created", "game": {

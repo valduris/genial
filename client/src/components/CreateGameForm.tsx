@@ -5,15 +5,15 @@ import { useForm } from "@mantine/form";
 import { Button, Fieldset, TextInput, InputWrapper, Checkbox, Container } from "@mantine/core";
 
 import { handleFetchResult, translate } from "../utils";
-import { BoardSize, Game, Genial, PlayerCount, Thunk } from "../types";
+import { BoardSize, Genial, LobbyGame, PlayerCount, Thunk } from "../types";
 import { setGenialState } from "../index";
-import { selectCurrentGameUuid, selectPlayerUuid } from "../selectors";
+import { selectCurrentGameUuid, selectIsGameInProgress, selectPlayerUuid } from "../selectors";
 
 export interface CreateGameFormFormState {
-    boardSize: Game["boardSize"];
-    playerCount: Game["playerCount"];
-    showProgress: Game["showProgress"];
-    name: Game["name"];
+    boardSize: LobbyGame["boardSize"];
+    playerCount: LobbyGame["playerCount"];
+    showProgress: LobbyGame["showProgress"];
+    name: LobbyGame["name"];
 }
 
 export interface CreateGameFormDispatchProps {
@@ -99,7 +99,7 @@ export function CreateGameForm(props: CreateGameFormProps) {
 }
 
 export const CreateGameFormConnected = connect(
-    (state: Genial) => ({ hidden: !!selectCurrentGameUuid(state) }),
+    (state: Genial) => ({ hidden: selectIsGameInProgress(state) }),
     { onSubmit: onCreateGameFormSubmit },
 )(CreateGameForm);
 

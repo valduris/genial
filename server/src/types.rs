@@ -118,6 +118,7 @@ pub type HexPairs = [Option<HexPair>; 6];
 
 pub struct Game {
     pub admin_uuid: Uuid,
+    pub admin_id: i32,
     pub board_size: i32,
     pub hex_pairs_in_bag: HexPairsInBag,
     pub player_to_move: Option<Uuid>,

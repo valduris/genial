@@ -5,7 +5,7 @@ import { connect } from "react-redux";
 import { debugAssert, handleFetchResult, mapTimes, translate } from "../../utils";
 import { LobbyGame, Genial, Thunk } from "../../types";
 import { setGenialState } from "../../index";
-import { selectPlayerUuid, selectPlayerId, selectCurrentGameUuid } from "../../selectors";
+import { selectPlayerUuid, selectPlayerId, selectCurrentGameUuid, selectIsGameInProgress } from "../../selectors";
 import { fetchJson } from "../../api";
 import { Button, Checkbox, Container, Fieldset, InputWrapper, Table, TextInput, Grid } from "@mantine/core";
 import { MAX_PLAYER_COUNT } from "../../consts";
@@ -105,7 +105,7 @@ export function LobbyGameComponent(props: LobbyGameProps) {
 export const LobbyGameConnected = connect((state: Genial) => {
     const lobbyGameUuid = selectCurrentGameUuid(state);
     return {
-        lobbyGame: lobbyGameUuid ? state.lobbyGames[lobbyGameUuid] : undefined,
+        lobbyGame: lobbyGameUuid && !selectIsGameInProgress(state) ? state.lobbyGames[lobbyGameUuid] : undefined,
         adminId: selectPlayerId(state),
         playerUuid: selectPlayerUuid(state),
     };
