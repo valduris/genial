@@ -43,7 +43,8 @@ describe("selectCurrentGameUuid", () => {
                     "players": [],
                     "showProgress": true,
                     "adminId": 12,
-                    "uuid": "fa8011c3-056b-4e26-b24e-a67d21649597"
+                    "uuid": "fa8011c3-056b-4e26-b24e-a67d21649597",
+                    "status": "created",
                 },
                 "42243e19-22f2-4a6f-b8c8-b27e1cdb9d08": {
                     "boardSize": 6,
@@ -58,7 +59,8 @@ describe("selectCurrentGameUuid", () => {
                     ],
                     "adminId": 12897,
                     "showProgress": true,
-                    "uuid": "42243e19-22f2-4a6f-b8c8-b27e1cdb9d08"
+                    "uuid": "42243e19-22f2-4a6f-b8c8-b27e1cdb9d08",
+                    "status": "created",
                 },
                 "1f3ed932-1518-4fee-8746-b540405b5fe7": {
                     "boardSize": 6,
@@ -67,6 +69,7 @@ describe("selectCurrentGameUuid", () => {
                     "players": [],
                     "showProgress": true,
                     "adminId": 11212,
+                    "status": "created",
                     "uuid": "1f3ed932-1518-4fee-8746-b540405b5fe7"
                 },
                 "9b7a1aae-5b9f-4218-90d4-90722675e289": {
@@ -76,6 +79,7 @@ describe("selectCurrentGameUuid", () => {
                     "players": [],
                     "showProgress": true,
                     "adminId": 12334234222,
+                    "status": "created",
                     "uuid": "9b7a1aae-5b9f-4218-90d4-90722675e289"
                 },
             },

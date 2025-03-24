@@ -148,24 +148,23 @@ pub async fn ws_ready_change(data: &Data<AppState>, session: &mut actix_ws::Sess
     }
 
     match data.games.read().get(&ready_change_payload.game_uuid) {
-        Some(game) => {
-            let mut game_write = game.write();
+        Some(game_rwlock) => {
+            let game_read = game_rwlock.read();
             // if all players are ready, shuffle player uuid vec, pick a random index and assign move, next player = index + 1 (wraps)
-            if game_write.players.iter().all(|uuid| {
+            if game_read.players.iter().all(|uuid| {
                 let player_read = data.players.read();
                 let ready = player_read.get(uuid).unwrap().read().ready;
                 drop(player_read);
                 ready
             }) {
-                game_write.players.clone().shuffle(&mut thread_rng());
-                let first_player_to_move = game_write.players.choose(&mut thread_rng()).copied();
-                let hex_pair_bag = game_write.hex_pairs_in_bag.clone();
+                game_read.players.clone().shuffle(&mut thread_rng());
+                let hex_pair_bag = game_read.hex_pairs_in_bag.clone();
 
-                game_write.players.iter().for_each(|player_uuid| {
+                game_rwlock.read().players.iter().for_each(|player_uuid| {
                     match players_read.get(&player_uuid) {
                         Some(player_rwlock) => {
                             let mut player_write = player_rwlock.write();
-                            for i in 0..5 {
+                            for i in 0..6 {
                                 match hex_pair_bag.clone().take_random_hex_pair() {
                                     Some(hex_pair) => {
                                         player_write.hex_pairs[i] = Some(hex_pair);
@@ -176,32 +175,28 @@ pub async fn ws_ready_change(data: &Data<AppState>, session: &mut actix_ws::Sess
 
                             let _ = data.rooms_state.read().unwrap().clients.get(&ready_change_payload.player_uuid.to_string()).unwrap().send(
                                 json!({
-                                    "type": "player_game_data",
+                                    "type": "player_game_state",
                                     "data": {
                                         "players": {
                                             &ready_change_payload.player_uuid.to_string(): {
                                                 "hexPairs": player_write.hex_pairs,
                                             }
-                                        }
+                                        },
                                     }
                                 }).to_string()
                             );
 
-
                             data.rooms_state.read().unwrap().broadcast_to_room(
                                 &ready_change_payload.game_uuid.to_string(),
                                 json!({
-                                    "type": "game_data",
+                                    "type": "game_state",
                                     "data": {
                                         "games": {
                                             &ready_change_payload.game_uuid.to_string(): {
                                                 "status": "in_progress",
-                                                "player_move_order": game_write.players,
+                                                "player_move_order": game_read.players,
                                             },
                                         },
-                                        "players": {
-
-                                        }
                                     }
                                 }).to_string().as_str(),
                                 None
@@ -213,6 +208,10 @@ pub async fn ws_ready_change(data: &Data<AppState>, session: &mut actix_ws::Sess
                     }
                 });
 
+                drop(game_read);
+
+                let mut game_write = game_rwlock.write();
+                let first_player_to_move = game_write.players.choose(&mut thread_rng()).copied();
                 game_write.player_to_move = first_player_to_move;
                 game_write.status = "in_progress".to_string();
                 drop(game_write);

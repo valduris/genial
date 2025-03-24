@@ -3,7 +3,7 @@ import * as React from "react";
 import { connect } from "react-redux";
 import { createTheme, MantineProvider, AppShell, MantineColorsTuple } from '@mantine/core';
 
-import { Thunk, PlayerHexyPairIndex, Genial, GameStatus, WebSocketState } from "./types"
+import { Thunk, PlayerHexyPairIndex, Genial, WebSocketState } from "./types"
 import { setGenialState } from "./index";
 import { LobbyGameListConnected, PlayerHexyPairListConnected, ProgressBarsConnected } from "./components";
 import { BoardConnected } from "./components/Board";
@@ -11,7 +11,6 @@ import { CreateGameFormConnected } from "./components/CreateGameForm";
 import { LobbyGameConnected } from "./components/lobbyGame/LobbyGame";
 import { Navigation } from "./components/navigation/Navigation";
 import { SystemMessageConnected } from "./components/SystemMessage";
-import { PlayerRegistrationFormConnected } from "./components/PlayerRegistrationForm";
 
 import '@mantine/core/styles.css';
 
@@ -54,7 +53,7 @@ export function GenialUi(props: GenialUiStateProps) {
                     <CreateGameFormConnected />
                     <LobbyGameListConnected />
                     <LobbyGameConnected />
-                    {props.game && props.game.status === GameStatus.InProgress && (
+                    {props.game && props.game.status === "in_progress" && (
                         <>
                             <BoardConnected />
                             <PlayerHexyPairListConnected />

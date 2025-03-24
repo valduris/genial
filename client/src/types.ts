@@ -54,10 +54,7 @@ export type Uuid4 = string;
 
 export type PlayerCount = 2 | 3 | 4;
 
-export enum GameStatus {
-    InProgress = "inProgress",
-    Lobby = "lobby",
-}
+export type GameStatus = "created" | "in_progress" | "ended";
 
 export type BoardHexyPair = [BoardHexy, BoardHexy];
 
@@ -96,6 +93,7 @@ export interface LobbyGame {
     playerCount: 2 | 3 | 4;
     showProgress: boolean;
     adminId: number;
+    status: GameStatus;
 }
 
 export type LobbyGames = Record<Uuid4, LobbyGame>;
