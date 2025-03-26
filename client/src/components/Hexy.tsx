@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import { Color } from "../types";
+import { colorToString } from "../utils";
 
 export interface HexyComponentProps {
     color: Color;
@@ -28,7 +29,7 @@ export function HexyComponent(props: HexyComponentProps) {
                 stroke="#000"
                 cx={40}
                 cy={50}
-                fill={props.color}
+                fill={colorToString(props.color)}
             />
         </g>
     );

@@ -2,10 +2,8 @@ import { COLORS, DIRECTIONS, SPECIAL_CORNERS } from "./consts";
 import {
     BoardHexy,
     BoardHexyPair,
-    BoardHexyPairs,
     BoardSize,
-    Color, ColorCode,
-    Direction,
+    Color,
     DrawableHexyPair,
     DrawableHexyPairs,
     Game,
@@ -82,10 +80,6 @@ export function createPlayerHexyPair(color1: Color, color2: Color, selectedIndex
     return [{ color: color1, selected: selectedIndex === 0 }, { color: color2, selected: selectedIndex === 1 }];
 }
 
-export function createBoardHexyPair(hexy1: BoardHexy, hexy2: BoardHexy): BoardHexyPair {
-    return [hexy1, hexy2];
-}
-
 export function createHexy(x: number, y: number, color: Color): BoardHexy {
     return { x: x, y: y, color: color };
 }
@@ -102,12 +96,12 @@ export function getColsByRow(row: number, boardSize: BoardSize) {
     return boardSize * 2 - 1 + (row * ((row > 0) ? -1 : 1));
 }
 
-export function getNextPointInDirection(point: Point, direction: Direction): Point {
-    return {
-        x: point.x + 1 * direction[0],
-        y: point.y + 1 * direction[1],
-    };
-}
+// export function getNextPointInDirection(point: Point, direction: Direction): Point {
+//     return {
+//         x: point.x + 1 * direction[0],
+//         y: point.y + 1 * direction[1],
+//     };
+// }
 
 export function createEmptyProgress(): Progress {
     return COLORS.reduce((m: Progress, c) => {
@@ -127,23 +121,23 @@ export function createDrawableHexyPairs(): DrawableHexyPairs {
     }, []);
 }
 
-export function calulateProgressGained(game: Pick<Game, "hexyPairs">, hexyPair: BoardHexyPair): Progress {
-    const progressGained: Progress = hexyPair.reduce((outerMemo: Progress, hexy) => {
-        return DIRECTIONS.reduce((progress, direction) => {
-            for (
-                let tempPoint: Point = getNextPointInDirection(hexy, direction),
-                    color = getColorByPoint(game.hexyPairs, tempPoint);
-                color === hexy.color;
-                progress[color] += 1,
-                tempPoint = getNextPointInDirection(tempPoint, direction),
-                color = getColorByPoint(game.hexyPairs, tempPoint)
-            );
-            return progress;
-        }, outerMemo);
-    }, createEmptyProgress());
-
-    return progressGained;
-}
+// export function calulateProgressGained(game: Pick<Game, "hexyPairs">, hexyPair: BoardHexyPair): Progress {
+//     const progressGained: Progress = hexyPair.reduce((outerMemo: Progress, hexy) => {
+//         return DIRECTIONS.reduce((progress, direction) => {
+//             for (
+//                 let tempPoint: Point = getNextPointInDirection(hexy, direction),
+//                     color = getColorByPoint(game.hexyPairs, tempPoint);
+//                 color === hexy.color;
+//                 progress[color] += 1,
+//                 tempPoint = getNextPointInDirection(tempPoint, direction),
+//                 color = getColorByPoint(game.hexyPairs, tempPoint)
+//             );
+//             return progress;
+//         }, outerMemo);
+//     }, createEmptyProgress());
+//
+//     return progressGained;
+// }
 
 export function isCoordinateValid(point: Point, boardSize: BoardSize): boolean {
     const col = point.x;
@@ -166,11 +160,16 @@ export function getNeighboringPoints(of: Point, boardSize: BoardSize): readonly 
     }, [] as Point[]);
 }
 
-export function getNeighboringHexysOf(of: Pick<BoardHexy, "x" | "y">, game: Pick<Game, "hexyPairs" | "boardSize">): (BoardHexy | Point)[] {
+export function getNeighboringHexysOf(of: Pick<BoardHexy, "x" | "y">, game: Pick<Game, "board" | "boardSize">): (BoardHexy | Point)[] {
     return DIRECTIONS.reduce((memo: (BoardHexy | Point)[], direction) => {
         const point = { x: of.x + direction[0], y: of.y + direction[1] };
-        const boardHexy: BoardHexy | undefined = game.hexyPairs.reduce((memo: BoardHexy | undefined, hexyPair) => {
-            return memo || hexyPair.find(hexy => hexy.x === point.x && hexy.y === point.y);
+        const boardHexy: BoardHexy | undefined = game.board.reduce((memo: BoardHexy | undefined, hexy) => {
+            if (memo) {
+                return memo
+            }
+            if (hexy.x === point.x && hexy.y === point.y) {
+                return hexy;
+            }
         }, undefined);
         return memo.concat(boardHexy ? [boardHexy] : isCoordinateValid(point, game.boardSize) ? [point] : []);
     }, []);
@@ -197,13 +196,13 @@ export function getSpecialCornerColorByPoint<T extends Point>(point: T): Color |
     })?.color;
 }
 
-export function getColorByPoint<T extends Point>(boardHexyPairs: BoardHexyPairs, point: T): Color | undefined {
-    const color = boardHexyPairs.reduce((color: Color | undefined, pair) => {
-        return color || pair.find(hexy => hexy.x === point.x && hexy.y === point.y)?.color;
-    }, undefined);
-
-    return color || getSpecialCornerColorByPoint(point);
-}
+// export function getColorByPoint<T extends Point>(boardHexyPairs: BoardHexyPairs, point: T): Color | undefined {
+//     const color = boardHexyPairs.reduce((color: Color | undefined, pair) => {
+//         return color || pair.find(hexy => hexy.x === point.x && hexy.y === point.y)?.color;
+//     }, undefined);
+//
+//     return color || getSpecialCornerColorByPoint(point);
+// }
 
 export function debugAssert(message: string) {
     throw new Error(message);
@@ -229,8 +228,8 @@ export function handleFetchResult(result: { status: "ok" | "error"; type: string
     }
 }
 
-export function colorCodeToColor(colorCode: ColorCode): Color {
-    const map: Record<ColorCode, Color> = {
+export function colorToString(color: Color): string {
+    const map: Record<Color, string> = {
         0: "red",
         1: "yellow",
         2: "orange",
@@ -239,5 +238,5 @@ export function colorCodeToColor(colorCode: ColorCode): Color {
         5: "violet",
     };
 
-    return map[colorCode];
+    return map[color];
 }

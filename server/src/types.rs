@@ -130,6 +130,4 @@ pub struct Game {
     pub players: Vec<Uuid>, // ordered by move sequence
 }
 
-pub type Board = Vec<BoardHex>;
-
-pub type Boards = Arc<RwLock<HashMap<Uuid, Arc<RwLock<Board>>>>>;
+pub type Boards = Arc<RwLock<HashMap<Uuid, Arc<RwLock<Vec<BoardHex>>>>>>;

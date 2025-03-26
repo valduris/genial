@@ -1,4 +1,3 @@
-use std::fmt::DebugMap;
 use std::io::prelude::*;
 use std::sync::{Arc};
 use parking_lot::RwLock;

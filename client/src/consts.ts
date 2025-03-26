@@ -1,7 +1,7 @@
 import { Color, Direction, HexColor, SpecialCorners } from "./types";
 import { createHexy } from "./utils";
 
-export const COLORS: Color[] = ["red", "blue", "green", "orange", "yellow", "violet"];
+export const COLORS: Color[] = [0, 1, 2, 3, 4, 5]; // "red", "blue", "green", "orange", "yellow", "violet"
 
 export const SET_GENIAL_UI_STATE = "genial/SET_GENIAL_UI_STATE";
 

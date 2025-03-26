@@ -13,6 +13,10 @@ export function selectPlayerSelectedHexyPair(state: DeepPick<Genial, "player", "
     return state.player.hexyPairs.find(hexyPair => hexyPair?.some(hexy => hexy.selected));
 }
 
+export function selectPlayerSelectedHexyPairIndex(state: DeepPick<Genial, "player", "hexyPairs">): number | undefined {
+    return state.player.hexyPairs.findIndex(hexyPair => hexyPair?.some(hexy => hexy.selected));
+}
+
 export function selectPlayerSelectedHexyPairHexyColor(state: DeepPick<Genial, "player", "hexyPairs">): Color | undefined {
     return state.player.hexyPairs.reduce((memo: Color | undefined, hexyPair) => {
         if (memo || !hexyPair) {
@@ -101,10 +105,6 @@ export type SelectIsPointAllowedToReceiveHoverState = FirstParam<[typeof selectF
     & Pick<Genial, "game">;
 
 export function selectIsPointAllowedToReceiveHover(state: SelectIsPointAllowedToReceiveHoverState, point: Point): boolean {
-    if (state.game) {
-        return false;
-    }
-
     const firstPlacedHexy = selectFirstPlacedHexy(state);
     const pointIsSpecialCorner = isPointSpecialCorner(point);
     const playerSelectedHexyPair = selectPlayerSelectedHexyPair(state);
@@ -140,8 +140,8 @@ export function selectIsPointAllowedToReceiveHover(state: SelectIsPointAllowedTo
 }
 
 export function selectIsPointCoveredWithHexy(state: Pick<Genial, "game">, point: Point): boolean {
-    return !!state.game && state.game.hexyPairs.some(hexyPair => {
-        return hexyPair.some(hexy => hexy.x === point.x && hexy.y === point.y);
+    return !!state.game && state.game.board.some(hexy => {
+        return hexy.x === point.x && hexy.y === point.y;
     });
 }
 

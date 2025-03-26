@@ -14,9 +14,7 @@ export interface PlayerHexy {
     selected: boolean;
 }
 
-export type Color = "red" | "yellow" | "orange" | "blue" | "green" | "violet";
-
-export type ColorCode = 0 | 1 | 2 | 3 | 4 | 5;
+export type Color = 0 | 1 | 2 | 3 | 4 | 5;
 
 export type BoardSize = 6 | 7 | 8;
 
@@ -55,6 +53,8 @@ export type Uuid4 = string;
 export type PlayerCount = 2 | 3 | 4;
 
 export type GameStatus = "created" | "in_progress" | "ended";
+
+export type Board = BoardHexy[];
 
 export type BoardHexyPair = [BoardHexy, BoardHexy];
 
@@ -107,7 +107,7 @@ export interface Game {
         name: string;
         progress?: Progress;
     }>;
-    hexyPairs: BoardHexyPairs;
+    board: Board;
     name: string;
     showProgress: boolean;
     status: GameStatus;

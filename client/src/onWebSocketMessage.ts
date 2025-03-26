@@ -1,7 +1,7 @@
-import { ColorCode, Game, GameStatus, PlayerHexyPairs, Thunk, Uuid4 } from "./types";
+import { Color, Game, GameStatus, PlayerHexyPairs, Thunk, Uuid4 } from "./types";
 import * as immer from "immer";
 import { setGenialState } from "./index";
-import { colorCodeToColor, createEmptyProgress } from "./utils";
+import { createEmptyProgress } from "./utils";
 
 interface LobbyGameData {
     games: Record<Uuid4, {
@@ -18,7 +18,7 @@ interface PlayerLobbyGameData {
     data: LobbyGameData;
 }
 
-export type ServerPlayerHexPair = [ColorCode, ColorCode] | null;
+export type ServerPlayerHexPair = [Color, Color] | null;
 export type ServerPlayerHexPairs = [ServerPlayerHexPair, ServerPlayerHexPair, ServerPlayerHexPair, ServerPlayerHexPair, ServerPlayerHexPair, ServerPlayerHexPair];
 
 interface PlayerGameState {
@@ -36,7 +36,7 @@ interface GameState {
             player_move_order: Uuid4[];
             status: Game["status"];
             board_size: Game["boardSize"];
-            hexy_pairs: Game["hexyPairs"];
+            board: Game["board"];
             name: Game["name"];
             show_progress: Game["showProgress"];
             uuid: Game["uuid"];
@@ -44,8 +44,17 @@ interface GameState {
         }>;
     };
 }
+interface GameStatePerMove {
+    type: "game_state_per_move";
+    data: {
+        games: Record<Uuid4, {
+            status?: Game["status"];
+            board: Game["board"];
+        }>;
+    };
+}
 
-type WsData = PlayerLobbyGameData | PlayerGameState | GameState;
+type WsData = PlayerLobbyGameData | PlayerGameState | GameState | GameStatePerMove;
 
 export function hasLobbyGameData(payload: WsData): payload is PlayerLobbyGameData {
     return ["player_joined", "player_left", "player_ready"].includes(payload.type);
@@ -67,12 +76,12 @@ export function onWebSocketMessage(payload: WsData): Thunk {
         } else if (payload.type === "player_game_state") {
             dispatch(setGenialState(immer.produce(getState(), state => {
                 const playedUuid = Object.keys(payload.data.players)[0];
-                const playerHexPairs = payload.data.players[playedUuid].hexPairs.map(hexPairsInColorCode => {
-                    if (hexPairsInColorCode === null) {
+                const playerHexPairs = payload.data.players[playedUuid].hexPairs.map(playerHexPair => {
+                    if (playerHexPair === null) {
                         return undefined;
                     }
-                    return hexPairsInColorCode.map(h => ({
-                        color: colorCodeToColor(h),
+                    return playerHexPair.map(color => ({
+                        color: color,
                         selected: false,
                     }));
                 }) as PlayerHexyPairs;
@@ -82,16 +91,27 @@ export function onWebSocketMessage(payload: WsData): Thunk {
             dispatch(setGenialState(immer.produce(getState(), state => {
                 for (const gameUuid in payload.data.games) {
                     const serverGame = payload.data.games[gameUuid];
-                    // state.lobbyGames[gameUuid].status = .status;
+                    state.lobbyGames[gameUuid].status = serverGame.status;
                     state.game = {
                         status: serverGame.status,
                         boardSize: serverGame.board_size,
-                        hexyPairs: serverGame.hexy_pairs,
+                        board: serverGame.board,
                         name: serverGame.name,
                         showProgress: serverGame.show_progress,
                         uuid: serverGame.uuid,
                         adminId: 0, // TODO
                         players: serverGame.players,
+                    }
+                    state.player.progress = createEmptyProgress();
+                }
+            })));
+        } else if (payload.type === "game_state_per_move") {
+            dispatch(setGenialState(immer.produce(getState(), state => {
+                for (const gameUuid in payload.data.games) {
+                    const serverGame = payload.data.games[gameUuid];
+                    // state.lobbyGames[gameUuid].status = serverGame.status;
+                    if (state.game) {
+                        state.game.board = serverGame.board;
                     }
                     state.player.progress = createEmptyProgress();
                 }

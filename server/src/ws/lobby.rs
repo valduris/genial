@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use actix_web::{web, HttpResponse};
+use std::sync::{Arc};
 use actix_web::web::Data;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -8,8 +8,9 @@ use rand::seq::SliceRandom;
 use uuid::Uuid;
 use crate::AppState;
 use crate::routes::lobby::collect_lobby_game_player_state;
-use crate::types::Player;
+use crate::types::{Player};
 use crate::util::error_log;
+use parking_lot::RwLock;
 
 #[derive(Deserialize, Debug)]
 struct WsRegister {
@@ -35,22 +36,9 @@ pub struct WsReadyChange {
     pub ready: bool,
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(tag = "type", content = "payload")]
-pub enum WsMessage {
-    // #[serde(alias="register")]
-    // Register(WsRegister),
-    #[serde(alias="join_game")]
-    JoinGame(WsJoinGame),
-    #[serde(alias="leave_game")]
-    LeaveGame(WsLeaveGame),
-    #[serde(alias="ready_change")]
-    ReadyChange(WsReadyChange),
-}
-
-pub async fn ws_register(app_state: &Data<AppState>, session: &mut actix_ws::Session, ws_register_payload: &WsRegister) {
-
-}
+// pub async fn ws_register(app_state: &Data<AppState>, session: &mut actix_ws::Session, ws_register_payload: &WsRegister) {
+//
+// }
 
 pub async fn ws_join_game(app_state: &Data<AppState>, session: &mut actix_ws::Session, join_game_data: &WsJoinGame) {
     let player_uuid = &join_game_data.player_uuid;
@@ -131,14 +119,14 @@ pub async fn ws_leave_game(app_state: &Data<AppState>, session: &mut actix_ws::S
         }));
 
         if let Err(_) = session.text(payload).await {
-            error_log(format!("ws connection closed (ws_join_game)"));
+            error_log(format!("ws connection closed (ws_leave_game)"));
         }
     } else {
         error_log(format!("game not found while leaving the game {}", &game_uuid));
     }
 }
 
-pub async fn ws_ready_change(data: &Data<AppState>, session: &mut actix_ws::Session, ready_change_payload: &WsReadyChange) {
+pub async fn ws_ready_change(data: &Data<AppState>, ready_change_payload: &WsReadyChange) {
     let players_read = data.players.read();
     match players_read.get(&ready_change_payload.player_uuid) {
         Some(player) => {
@@ -198,7 +186,7 @@ pub async fn ws_ready_change(data: &Data<AppState>, session: &mut actix_ws::Sess
                                                 "status": "in_progress",
                                                 "player_move_order": game_read.players,
                                                 "board_size": game_read.board_size,
-                                                "hexy_pairs": [],
+                                                "board": [],
                                                 "name": game_read.name,
                                                 "show_progress": game_read.show_progress,
                                                 "uuid": game_read.uuid,
@@ -223,6 +211,8 @@ pub async fn ws_ready_change(data: &Data<AppState>, session: &mut actix_ws::Sess
                 game_write.player_to_move = first_player_to_move;
                 game_write.status = "in_progress".to_string();
                 drop(game_write);
+
+                data.boards.write().insert(ready_change_payload.game_uuid, Arc::new(RwLock::new(Vec::new())));
             }
 
             data.rooms_state.read().unwrap().broadcast_to_room(

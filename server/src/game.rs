@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::iter::{Iterator};
 use std::sync::{Arc, RwLock};
 use serde::Serialize;
-use crate::types::{Board, BoardHex, BoardHexPair, Color, HexPair, Point, Progress};
+use crate::types::{BoardHex, BoardHexPair, Color, HexPair, Point, Progress};
 use lazy_static::lazy_static;
 
 lazy_static! {
@@ -78,7 +78,7 @@ pub fn get_color_by_point(board: &Vec<BoardHex>, point: Point) -> Option<Color> 
     board_hex?.color.into()
 }
 
-pub fn calculate_progress_gained(board: Board, hex_pair: BoardHexPair) -> Progress {
+pub fn calculate_progress_gained(board: Vec<BoardHex>, hex_pair: BoardHexPair) -> Progress {
     let mut progress_gained: Progress = Progress::new();
 
     [0, 1].iter().for_each(|i: &usize| {
@@ -118,7 +118,7 @@ pub fn is_point_special(point: &Point) -> bool {
     SPECIAL_HEX_POINTS.into_iter().any(|p| p.x == point.x && p.y == point.y)
 }
 
-pub fn is_point_covered_with_hex(board: &Board /* Vec<BoardHex> */, point: &Point) -> bool {
+pub fn is_point_covered_with_hex(board: &Vec<BoardHex> /* Vec<BoardHex> */, point: &Point) -> bool {
     board.into_iter().any(|board_hex: &BoardHex| board_hex.x == point.x && board_hex.y == point.y)
 }
 
@@ -126,7 +126,7 @@ pub fn equal_colors(board_hex_1: BoardHex, board_hex_2: BoardHex) -> bool {
     board_hex_1.color == board_hex_2.color
 }
 
-pub fn is_valid_hex_pair_placement(board: &Board, board_size: i32, hex_pair: BoardHexPair) -> bool {
+pub fn is_valid_hex_pair_placement(board: &Vec<BoardHex>, board_size: i32, hex_pair: BoardHexPair) -> bool {
     let p1: Point = Point { x: hex_pair[0].x, y: hex_pair[0].y };
     let p2: Point = Point { x: hex_pair[1].x, y: hex_pair[1].y };
 

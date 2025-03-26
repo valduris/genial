@@ -7,14 +7,14 @@ describe("selectHexyStyleByPoint", () => {
         const state: SelectHexyStyleByPointState = {
             player: {
                 hexyPairs: [
-                    createPlayerHexyPair("red", "blue", 0),
+                    createPlayerHexyPair(0, 1, 0),
                     undefined,
                     undefined,
                     undefined,
                     undefined,
                     undefined
                 ],
-                firstPlacedHexy: createHexy(1, 1, "red"),
+                firstPlacedHexy: createHexy(1, 1, 0),
                 hoveredHexyCoords: { x: 1, y: 2 },
             },
         };

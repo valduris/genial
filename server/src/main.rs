@@ -14,17 +14,16 @@ use actix_cors::Cors;
 use sqlx::postgres::{PgPoolOptions};
 use sqlx::{FromRow, Pool, Postgres, Row};
 use serde::{Deserialize, Serialize};
-use crate::routes::game::api_game_place_hex_pair;
 use crate::routes::lobby::{api_game_create, api_get_games, api_get_lobby_game, api_player_info, api_player_register, load_existing_games_from_database, load_existing_players_from_database};
-use crate::ws::{websocket_handler, RoomsState, start_cleanup_task};
+use crate::ws::{websocket_handler, start_cleanup_task};
 use crate::types::{Boards, Games, Players};
 use futures_util::StreamExt;
+use crate::ws::rooms_state::RoomsState;
 
 mod types;
 mod game;
 mod util;
 mod routes;
-mod trash;
 mod ws;
 
 pub struct AppState {
@@ -83,7 +82,6 @@ async fn main() -> std::io::Result<()> {
             .route("/api/lobby_game", web::post().to(api_get_lobby_game))
             .route("/api/player/register", web::post().to(api_player_register))
             .route("/api/player/info", web::post().to(api_player_info))
-            .route("/api/game/placeHexy", web::post().to(api_game_place_hex_pair))
             .route("/ws/{user_id}", web::get().to(websocket_handler))
             .wrap(middleware::NormalizePath::trim())
     })

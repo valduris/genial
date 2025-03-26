@@ -4,17 +4,23 @@ import * as React from "react";
 import { connect } from "react-redux";
 
 import {
-    calulateProgressGained, clamp, createBoardHexyPair, createHexy, getColsByRow, getXyCoordsByRowCol
+    colorToString,
+    createHexy,
+    getColsByRow,
+    getXyCoordsByRowCol
 } from "../utils";
 import {
-    selectHexyStyleByPoint, selectIsPointAllowedToReceiveHover, selectPlayerSelectedHexyPair, selectPlayerSelectedHexyPairHexyColor
+    selectHexyStyleByPoint,
+    selectIsPointAllowedToReceiveHover,
+    selectPlayerSelectedHexyPair,
+    selectPlayerSelectedHexyPairHexyColor,
+    selectPlayerSelectedHexyPairIndex
 } from "../selectors";
 import { HexyComponent } from "./Hexy";
 import {
-    Genial, Point, ProgressValue, Thunk, BoardHexyPair, BoardSize
+    Genial, Point, Thunk, BoardHexyPair, BoardSize, BoardHexy
 } from "../types";
 import { setGenialState } from "../index";
-import { COLORS } from "../consts";
 
 export interface BoardStateProps {
     game: Genial["game"];
@@ -78,7 +84,7 @@ export function Board(props: BoardProps) {
                                                 stroke="#aaa"
                                                 cx={50}
                                                 cy={50}
-                                                fill={hexyStyle.circle.color}
+                                                fill={colorToString(hexyStyle.circle.color)}
                                             />
                                         )}
                                     </g>
@@ -89,22 +95,16 @@ export function Board(props: BoardProps) {
                     })()}
                 </g>
                 <g className="board">
-                    {props.game.hexyPairs.map((hexyPair: BoardHexyPair, index) => {
+                    {props.game.board.map((hexy: BoardHexy, index) => {
+                        const { x, y } = getXyCoordsByRowCol({ row: hexy.y, col: hexy.x, boardSize: props.game!.boardSize });
                         return (
-                            <g key={index}>
-                                {hexyPair.map(hexy => {
-                                    const { x, y } = getXyCoordsByRowCol({ row: hexy.y, col: hexy.x, boardSize: props.game!.boardSize });
-                                    return (
-                                        <HexyComponent
-                                            key={`${x}_${y}`}
-                                            color={hexy.color}
-                                            cx={x}
-                                            cy={y}
-                                        />
-                                    )
-                                })}
-                            </g>
-                        );
+                            <HexyComponent
+                                key={`${x}_${y}`}
+                                color={hexy.color}
+                                cx={x}
+                                cy={y}
+                            />
+                        )
                     })}
                 </g>
             </svg>
@@ -132,66 +132,70 @@ export function onBoardHexyMouseEnter(point: Point): Thunk {
 }
 
 export function onPreviewedBoardHexyClick(point: Point, preview: boolean): Thunk {
-    return (dispatch, getState) => {
-        if (!preview) {
+    return (dispatch, getState, { transport }) => {
+        const state = getState();
+
+        if (!preview || !state.game || !selectPlayerSelectedHexyPair(state)) {
             return;
         }
 
-        dispatch(setGenialState(immer.produce(getState(), state => {
-            if (!state.game) {
-                return state;
-            }
+        dispatch(setGenialState(immer.produce(getState(), draftState => {
+            const playerSelectedHexyPair = selectPlayerSelectedHexyPair(draftState);
 
-            const playerSelectedHexyPair = selectPlayerSelectedHexyPair(state);
+            if (draftState.player.firstPlacedHexy && draftState.game) {
+                transport.send(JSON.stringify({
+                    type: "place_hex_pair",
+                    payload: {
+                        hex_pair_index: selectPlayerSelectedHexyPairIndex(draftState),
+                        game_uuid: draftState.game.uuid,
+                        player_uuid: draftState.player.uuid,
+                        hex1: {
+                            ...draftState.player.firstPlacedHexy,
+                            color: draftState.player.firstPlacedHexy.color,
+                        },
+                        hex2: {
+                            // @ts-ignore
+                            color: selectPlayerSelectedHexyPairHexyColor(draftState),
+                            ...point,
+                        },
+                    },
+                }));
 
-            if (!playerSelectedHexyPair) {
-                return
-            }
-
-            if (!state.player.firstPlacedHexy) {
-                state.player.firstPlacedHexy = createHexy(point.x, point.y, selectPlayerSelectedHexyPairHexyColor(state)!);
+                draftState.player.hexyPairs.splice(state.player.hexyPairs.indexOf(playerSelectedHexyPair), 1, undefined);
+                draftState.player.firstPlacedHexy = undefined;
+            } else if (!draftState.player.firstPlacedHexy && playerSelectedHexyPair) {
+                draftState.player.firstPlacedHexy = createHexy(point.x, point.y, selectPlayerSelectedHexyPairHexyColor(draftState)!);
                 const isZerothHexySelected = playerSelectedHexyPair[0].selected;
                 playerSelectedHexyPair[isZerothHexySelected ? 0 : 1].selected = false;
                 playerSelectedHexyPair[isZerothHexySelected ? 1 : 0].selected = true;
-            } else if (state.player.firstPlacedHexy !== undefined) {
-                const boardHexyPair = createBoardHexyPair(
-                    state.player.firstPlacedHexy,
-                    createHexy(point.x, point.y, selectPlayerSelectedHexyPairHexyColor(state)!)
-                );
-                const progressGained = calulateProgressGained(state.game, boardHexyPair);
-                const movesGained = COLORS.reduce((memo, color) => {
-                    const newProgress = clamp(0, state.player.progress[color] + progressGained[color], 18);
-                    const result = state.player.progress[color] !== 18 && newProgress === 18 ? memo + 1 : memo;
-                    state.player.progress[color] = newProgress as ProgressValue;
-                    return result;
-                }, 0);
-                const movesRemaining = state.player.movesInTurn + movesGained - 1;
-
-                // state.player.movesInTurn = movesRemaining;
-                state.game.hexyPairs.push(boardHexyPair);
-                state.player.hexyPairs.splice(state.player.hexyPairs.indexOf(playerSelectedHexyPair), 1, undefined);
-                state.player.firstPlacedHexy = undefined;
-
-                if (movesRemaining === 0) {
-                    while (state.player.hexyPairs.some(h => h === undefined)) {
-                        // const randomIndex = Math.floor(Math.random() * state.game.drawableHexyPairs.length);
-                        // const [drawnHexyPair] = state.game.drawableHexyPairs.splice(randomIndex, 1);
-                        // console.log(JSON.stringify(state.player.hexyPairs, null, 2))
-                        // const emptyIndex = state.player.hexyPairs.findIndex(h => h === undefined);
-                        // state.player.hexyPairs.splice(emptyIndex, 1, drawnHexyPair.map(h => ({
-                        //     color: h.color,
-                        //     selected: false,
-                        // })) as PlayerHexyPair);
-                    }
-                    // assign move to another player
-                }
-
-                // state.player.movesInTurn = 1;
-
-                fetch("http://localhost:8080/api/game/placeHexy").then(result => {
-                    result.json();
-                });
             }
+
+            // const boardHexyPair = createBoardHexyPair(
+            //     state.player.firstPlacedHexy,
+            //     createHexy(point.x, point.y, selectPlayerSelectedHexyPairHexyColor(state)!)
+            // );
+            // const progressGained = calulateProgressGained(state.game, boardHexyPair);
+            // const movesGained = COLORS.reduce((memo, color) => {
+            //     const newProgress = clamp(0, state.player.progress[color] + progressGained[color], 18);
+            //     const result = state.player.progress[color] !== 18 && newProgress === 18 ? memo + 1 : memo;
+            //     state.player.progress[color] = newProgress as ProgressValue;
+            //     return result;
+            // }, 0);
+            // const movesRemaining = state.player.movesInTurn + movesGained - 1;
+            // state.player.movesInTurn = movesRemaining;
+            // state.game.hexyPairs.push(boardHexyPair);
+            // if (movesRemaining === 0) {
+            //     while (state.player.hexyPairs.some(h => h === undefined)) {
+            //         const randomIndex = Math.floor(Math.random() * state.game.drawableHexyPairs.length);
+            //         const [drawnHexyPair] = state.game.drawableHexyPairs.splice(randomIndex, 1);
+            //         console.log(JSON.stringify(state.player.hexyPairs, null, 2))
+            //         const emptyIndex = state.player.hexyPairs.findIndex(h => h === undefined);
+            //         state.player.hexyPairs.splice(emptyIndex, 1, drawnHexyPair.map(h => ({
+            //             color: h.color,
+            //             selected: false,
+            //         })) as PlayerHexyPair);
+            //     }
+            // }
         })));
     };
 }

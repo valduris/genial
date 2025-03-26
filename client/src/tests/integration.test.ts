@@ -4,7 +4,6 @@ import { selectPlayerSelectedHexyPair } from "../selectors";
 import { onBoardHexyMouseEnter } from "../components/Board";
 import {
     createBoardHexy,
-    createBoardHexyPair,
     createDrawableHexyPairs,
     createPlayerHexyPair,
 } from "../utils";
