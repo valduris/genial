@@ -5,22 +5,19 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4.9.0"
-actix-web-lab = "0.23.0"
 parking_lot = "0.12.3"
 futures-util = { version = "0.3.31", default-features = false, features = ["std"] }
 dotenv = "0.15.0"
 sqlx = { version = "0.8.2", features=["postgres", "runtime-tokio", "uuid"] }
 serde_json = { version = "1.0.133", default-features = false, features = ["alloc", "raw_value"] }
-serde_repr = { version = "0.1.20" }
 serde = { version = "1.0.215", features = ["std", "default", "derive", "serde_derive"] }
 actix-cors = "0.7.0"
 uuid = { version = "1.15.1", features = ["v4", "serde"] }
 tokio = { version = "1.42.0", features = ["sync", "io-util", "rt", "time", "macros"] }
-tokio-stream = "0.1.16"
-rand = "0.8.5"
+rand = { version = "0.8.5", features = ["std_rng"] }
 lazy_static = "1.5.0"
 actix-ws = "0.3.0"
-log = "0.4.22"
+log = "0.4.26"
 env_logger = "0.11.5"
 
 [lints.rust]

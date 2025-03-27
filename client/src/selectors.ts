@@ -25,7 +25,7 @@ export function selectPlayerSelectedHexyPairHexyColor(state: DeepPick<Genial, "p
 
         const selectedHexyColor = hexyPair.find(hexy => hexy.selected)?.color;
 
-        if (selectedHexyColor) {
+        if (selectedHexyColor !== undefined) {
             return selectedHexyColor;
         }
 

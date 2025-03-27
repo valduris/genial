@@ -62,7 +62,7 @@ pub async fn ws_place_hex_pair(data: &Data<AppState>, place_hex_pair_payload: &W
                     drop(player_read);
                     let mut player_write = player_rwlock.write();
                     player_write.moves_in_turn += genial_count - 1;
-                    player_write.progress = total_progress;
+                    player_write.progress = total_progress.clone();
 
                     // draw random hex pairs from available hex pair list, insert into players hex pair list
                     if player_write.moves_in_turn == 0 {
@@ -90,6 +90,8 @@ pub async fn ws_place_hex_pair(data: &Data<AppState>, place_hex_pair_payload: &W
                 }
             }
 
+            let player_read = player_rwlock.read();
+
             data.rooms_state.read().unwrap().broadcast_to_room(
                 &place_hex_pair_payload.game_uuid.to_string(),
                 json!({
@@ -99,6 +101,11 @@ pub async fn ws_place_hex_pair(data: &Data<AppState>, place_hex_pair_payload: &W
                             &place_hex_pair_payload.game_uuid.to_string(): {
                                 "status": "in_progress",
                                 "board": data.boards.read().get(&place_hex_pair_payload.game_uuid).unwrap().read().iter().collect::<Vec<&BoardHex>>(),
+                            },
+                        },
+                        "players": {
+                            player_read.id.to_string(): {
+                                "progress": player_read.progress,
                             },
                         },
                     }

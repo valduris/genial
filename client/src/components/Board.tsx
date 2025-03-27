@@ -77,7 +77,7 @@ export function Board(props: BoardProps) {
                                             strokeWidth={hexyStyle.hex.strokeWidth}
                                         />
                                         <text x="30" y="50" transform={"rotate(-90, 45, 45)"}>{`${col},${row}`}</text>
-                                        {hexyStyle.circle.color && (
+                                        {hexyStyle.circle.color !== undefined && (
                                             <ellipse
                                                 ry="30"
                                                 rx="30"
@@ -154,7 +154,6 @@ export function onPreviewedBoardHexyClick(point: Point, preview: boolean): Thunk
                             color: draftState.player.firstPlacedHexy.color,
                         },
                         hex2: {
-                            // @ts-ignore
                             color: selectPlayerSelectedHexyPairHexyColor(draftState),
                             ...point,
                         },

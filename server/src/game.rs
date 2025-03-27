@@ -7,7 +7,7 @@ use lazy_static::lazy_static;
 
 lazy_static! {
     pub static ref COLORS: Vec<Color> = {
-        vec![Color::Red, Color::Blue, Color::Green, Color::Orange, Color::Yellow, Color::Violet]
+        vec![0, 1, 2, 3, 4, 5]
     };
 
     static ref SPECIAL_CORNER_COORDINATES: Vec<(i8, i8)> = {
@@ -25,12 +25,12 @@ lazy_static! {
     };
 
     static ref SPECIAL_POINT_NEIGHBORS: HashMap<Color, (Color, Color)> = HashMap::from([
-        (Color::Red, (Color::Violet, Color::Orange)),
-        (Color::Violet, (Color::Red, Color::Blue)),
-        (Color::Blue, (Color::Violet, Color::Green)),
-        (Color::Green, (Color::Blue, Color::Yellow)),
-        (Color::Yellow, (Color::Green, Color::Orange)),
-        (Color::Orange, (Color::Yellow, Color::Red)),
+        (0, (5, 3)),
+        (5, (0, 1)),
+        (1, (5, 2)),
+        (2, (1, 4)),
+        (4, (2, 3)),
+        (3, (4, 0)),
     ]);
 }
 
@@ -83,7 +83,7 @@ pub fn calculate_progress_gained(board: Vec<BoardHex>, hex_pair: BoardHexPair) -
 
     [0, 1].iter().for_each(|i: &usize| {
         DIRECTIONS.iter().for_each(|direction| {
-            let mut temp_point = get_next_point_in_direction(Point { x: hex_pair[*i].x, y: hex_pair[0].y }, *direction);
+            let mut temp_point = get_next_point_in_direction(Point { x: hex_pair[*i].x, y: hex_pair[*i].y }, *direction);
             loop {
                 let color = get_color_by_point(&board, temp_point.clone());
 
@@ -101,13 +101,20 @@ pub fn calculate_progress_gained(board: Vec<BoardHex>, hex_pair: BoardHexPair) -
     progress_gained
 }
 
+#[test]
+fn test_calculate_progress_gained() {
+    let board_hex = [BoardHex { x: 0, y: 5, color: 4.into() }, BoardHex { x: 1, y: 5, color: 4.into() }];
+    let result = calculate_progress_gained(Vec::new(), board_hex);
+    assert_eq!(result.0.get((&4).into()).unwrap(), &2);
+}
+
 pub const SPECIAL_HEX_POINTS: [BoardHex; 6] = [
-    BoardHex { color: Color::Red, x: -6, y: 0 },
-    BoardHex { color: Color::Blue, x: 0, y: -6 },
-    BoardHex { color: Color::Green, x: 6, y: 0 },
-    BoardHex { color: Color::Orange, x: -6, y: 6 },
-    BoardHex { color: Color::Yellow, x: 0, y: 6 },
-    BoardHex { color: Color::Violet, x: 6, y: -6 }
+    BoardHex { color: 0, x: -6, y: 0 },
+    BoardHex { color: 1, x: 0, y: -6 },
+    BoardHex { color: 2, x: 6, y: 0 },
+    BoardHex { color: 3, x: -6, y: 6 },
+    BoardHex { color: 4, x: 0, y: 6 },
+    BoardHex { color: 5, x: 6, y: -6 }
 ];
 
 pub fn get_special_hex_point_by_point(point: &Point) -> Option<BoardHex> {

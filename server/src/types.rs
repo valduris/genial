@@ -6,7 +6,6 @@ use uuid::Uuid;
 use serde::Serializer;
 use crate::game::HexPairsInBag;
 use crate::util::error_log;
-use serde_repr::*;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Copy, Clone)]
 pub struct BoardHex {
@@ -20,29 +19,7 @@ pub struct PlayerHex {
     color: Color,
 }
 
-#[derive(Debug, Serialize_repr, Deserialize_repr, Clone, PartialEq, Copy, Hash, Eq)]
-#[repr(u8)]
-pub enum Color {
-    Red = 0,
-    Yellow = 1,
-    Orange = 2,
-    Blue = 3,
-    Green = 4,
-    Violet = 5,
-}
-
-impl Color {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Color::Red => "red",
-            Color::Yellow => "yellow",
-            Color::Orange => "orange",
-            Color::Blue => "blue",
-            Color::Green => "green",
-            Color::Violet => "violet",
-        }
-    }
-}
+pub type Color = u8;
 
 pub type Games = Arc<RwLock<HashMap<Uuid, Arc<RwLock<Game>>>>>;
 
@@ -60,18 +37,18 @@ pub struct Player {
     pub progress: Progress,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Progress(HashMap<Color, u8>);
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct Progress(pub HashMap<Color, u8>);
 
 impl Progress {
     pub fn new() -> Progress {
         Progress(HashMap::from([
-            (Color::Red, 0),
-            (Color::Yellow, 0),
-            (Color::Orange, 0),
-            (Color::Blue, 0),
-            (Color::Green, 0),
-            (Color::Violet, 0),
+            (0, 0),
+            (4, 0),
+            (3, 0),
+            (1, 0),
+            (2, 0),
+            (5, 0),
         ]))
     }
 
@@ -96,7 +73,7 @@ impl Progress {
                     acc.0.insert(*color, (value + other_value).clamp(0, 18));
                 }
                 None => {
-                    error_log(format!("color {} does not have a value in Progress", color.as_str()));
+                    error_log(format!("color {} does not have a value in Progress", color));
                 }
             }
             return acc;
